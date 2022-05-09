@@ -10,6 +10,7 @@
 		- [Chip Emulators](#chip-emulators)
 		- [Application VMs](#application-vms)
 		- [Miscellaneous](#miscellaneous)
+		- [LLJS Tutorials](#lljs-tutorials)
 
 <!-- /TOC -->
 
@@ -41,3 +42,8 @@ Emulators are an extention of virtual machines allowing a user to recreate the p
 - [Building a retro game for PICO-8](https://thenewstack.io/retro-game-pico-8-basics/)
 - [Virtual6502](http://visual6502.org/JSSim/index.html) - full visual chip simulation of a MOS6502 chip.
 - [Stack Computers: the new wave](https://users.ece.cmu.edu/~koopman/stack_computers/index.html) - A, slightly dated, e-book that describes stack machines with _FANTASTIC_ diagrams.
+
+### LLJS Tutorials
+- [The Bits and Bytes of Binary](https://www.youtube.com/playlist?list=PLP29wDx6QmW47oPsNBFNEi_SYTOLDJXqQ) - Entry-level friendly introductions to binary and common binary operations.
+- [16-bit VM series](https://www.youtube.com/playlist?list=PLP29wDx6QmW5DdwpdwHCRJsEubS5NrQ9b) - about 6 hours of content
+ 

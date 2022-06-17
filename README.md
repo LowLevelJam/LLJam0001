@@ -5,6 +5,7 @@
 - [Low-Level Jam 0001](#low-level-jam-0001)
 	- [Introduction](#introduction)
 	- [What are we building](#what-are-we-building)
+	- [Theme](#theme)
 	- [When will it be](#when-will-it-be)
 	- [How to Play](#how-to-play)
 		- [How to Submit an Entry](#how-to-submit-an-entry)
@@ -28,6 +29,11 @@ If you are interested in participating or finding a team for the jam, join [the 
 The goal of this project is to get code running somewhere it normally wouldn't be. This could mean simulating hardware, like a console or circuit emulator. It could mean a virtual console, like the likes of corewar or pico-8. It could mean building hardware to simulate an important tool, like a rom emulator for a piece of old hardware. Or it could mean building an entirely new architecture of your own design to share with the other players.
 
 We aim to not limit creativity and instead encourage players to experiment on something they normally wouldn't think to try.
+
+## Theme
+The theme of this jam will be 
+
+Small, but mighty.
 
 ## When will it be
 The event will take place starting Friday, June 17, 2022 at 17:00 GMT running for 1 week until 17:00 GMT on Friday, June 24, 2022.

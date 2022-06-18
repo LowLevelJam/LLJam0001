@@ -52,11 +52,42 @@
 // buffer to store pad states for flash save
 #define BUTTON_COUNT 100
 
-u8 display_state[BUTTON_COUNT] = {0};
-u8 temp_state[BUTTON_COUNT] = {0};
-u8 beat = 0;
+enum CELL_TYPE
+{
+  EMPTY = 0,
+  INPUT = 1,
+  GATE = 2,
+};
+
+enum GATE_TYPE
+{
+  AND = 0,
+  OR = 1,
+  XOR = 2,
+  NOT = 3,
+};
+
+struct cell
+{
+  enum CELL_TYPE type;
+  u8 input_index;
+  enum GATE_TYPE gate_type;
+  u8 gate_input_index_a;
+  u8 gate_input_index_b;
+  u8 output;
+};
+
+struct cell display_state[BUTTON_COUNT] = {0};
+// u8 temp_state[BUTTON_COUNT] = {0};
+u8 held_button_index = 0;
 
 //______________________________________________________________________________
+
+u8 is_input_button(u8 index)
+{
+  // TODO: check if this is an input button
+  return index == 10;
+}
 
 void app_surface_event(u8 type, u8 index, u8 value)
 {
@@ -64,14 +95,26 @@ void app_surface_event(u8 type, u8 index, u8 value)
   {
   case TYPEPAD:
   {
-    // toggle it and store it off, so we can save to flash if we want to
-    if (value)
+    if (is_input_button(index))
     {
-      display_state[index] = MAXLED * !display_state[index];
+      if (value)
+      {
+        held_button_index = index;
+      }
+      else
+      {
+        held_button_index = 0;
+      }
+    }
+
+    if (held_button_index)
+    {
+      display_state[index].input_index = held_button_index;
+      display_state[index].type = INPUT;
     }
 
     // example - light / extinguish pad LEDs
-    hal_plot_led(TYPEPAD, index, 0, 0, display_state[index]);
+    // hal_plot_led(TYPEPAD, index, 0, 0, display_state[index].output * MAXLED);
     break;
   }
   }
@@ -97,16 +140,47 @@ void app_cable_event(u8 type, u8 value) {}
 
 void app_timer_event()
 {
-//   // example - send MIDI clock at 125bpm
 #define TICK_MS 500
 
   static u16 ms = TICK_MS;
   if (++ms >= TICK_MS)
   {
     ms = 0;
+    display_state[10].output = !display_state[10].output;
 
-    beat = !beat;
-    hal_plot_led(TYPEPAD, 1, 0, beat * MAXLED, 0);
+    for (u8 i = 0; i < BUTTON_COUNT; i++)
+    {
+      if (display_state[i].type == INPUT)
+      {
+        display_state[i].output = display_state[display_state[i].input_index].output;
+      }
+      else if (display_state[i].type == GATE)
+      {
+        u8 a = display_state[display_state[i].gate_input_index_a].output;
+        u8 b = display_state[display_state[i].gate_input_index_b].output;
+        u8 output = 0;
+        switch (display_state[i].gate_type)
+        {
+        case AND:
+          output = a & b;
+          break;
+        case OR:
+          output = a | b;
+          break;
+        case XOR:
+          output = a ^ b;
+          break;
+        case NOT:
+          output = !a;
+          break;
+        }
+        display_state[i].output = output;
+      }
+
+      hal_plot_led(TYPEPAD, i, 0, 0, display_state[i].output * MAXLED);
+    }
+
+    // hal_plot_led(TYPEPAD, 10, 0, display_state[10].output * MAXLED, 0);
   }
 }
 

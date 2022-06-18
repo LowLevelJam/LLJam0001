@@ -148,37 +148,75 @@ void app_timer_event()
     ms = 0;
     display_state[10].output = !display_state[10].output;
 
-    for (u8 i = 0; i < BUTTON_COUNT; i++)
+    // for (u8 i = 0; i < BUTTON_COUNT - 10; i++)
+    for (u8 y = 1; y < 9; y++)
     {
-      if (display_state[i].type == INPUT)
+      u8 last_row_value = 0;
+      for (u8 x = 1; x < 9; x++)
       {
-        display_state[i].output = display_state[display_state[i].input_index].output;
-      }
-      else if (display_state[i].type == GATE)
-      {
-        u8 a = display_state[display_state[i].gate_input_index_a].output;
-        u8 b = display_state[display_state[i].gate_input_index_b].output;
-        u8 output = 0;
-        switch (display_state[i].gate_type)
+        u8 index = x + y * 10;
+        if (display_state[index].type == INPUT)
         {
-        case AND:
-          output = a & b;
-          break;
-        case OR:
-          output = a | b;
-          break;
-        case XOR:
-          output = a ^ b;
-          break;
-        case NOT:
-          output = !a;
-          break;
+          display_state[index].output = display_state[display_state[index].input_index].output;
+          last_row_value = display_state[index].output;
         }
-        display_state[i].output = output;
+        else if (display_state[index].type == GATE)
+        {
+          u8 a = display_state[display_state[index].gate_input_index_a].output;
+          u8 b = display_state[display_state[index].gate_input_index_b].output;
+          switch (display_state[index].gate_type)
+          {
+          case AND:
+            display_state[index].output = a && b;
+            break;
+          case OR:
+            display_state[index].output = a || b;
+            break;
+          case XOR:
+            display_state[index].output = a ^ b;
+            break;
+          case NOT:
+            display_state[index].output = !a;
+            break;
+          }
+          last_row_value = display_state[index].output;
+        }
+        hal_plot_led(TYPEPAD, index, 0, 0, display_state[index].output * MAXLED);
       }
-
-      hal_plot_led(TYPEPAD, i, 0, 0, display_state[i].output * MAXLED);
+      display_state[y * 10 + 9].output = last_row_value;
+      hal_plot_led(TYPEPAD, y * 10 + 9, 0, 0, display_state[y * 10 + 9].output * MAXLED);
     }
+    hal_plot_led(TYPEPAD, 10, 0, 0, display_state[10].output * MAXLED);
+    // {
+    //   if (display_state[i].type == INPUT)
+    //   {
+    //     display_state[i].output = display_state[display_state[i].input_index].output;
+    //   }
+    //   else if (display_state[i].type == GATE)
+    //   {
+    //     u8 a = display_state[display_state[i].gate_input_index_a].output;
+    //     u8 b = display_state[display_state[i].gate_input_index_b].output;
+    //     u8 output = 0;
+    //     switch (display_state[i].gate_type)
+    //     {
+    //     case AND:
+    //       output = a & b;
+    //       break;
+    //     case OR:
+    //       output = a | b;
+    //       break;
+    //     case XOR:
+    //       output = a ^ b;
+    //       break;
+    //     case NOT:
+    //       output = !a;
+    //       break;
+    //     }
+    //     display_state[i].output = output;
+    //   }
+
+    //   hal_plot_led(TYPEPAD, i, 0, 0, display_state[i].output * MAXLED);
+    // }
 
     // hal_plot_led(TYPEPAD, 10, 0, display_state[10].output * MAXLED, 0);
   }
@@ -190,6 +228,11 @@ void app_init(const u16 *adc_raw)
 {
   // example - load button statess from flash
   // hal_read_flash(0, g_Buttons, BsUTTON_COUNT);
+
+  hal_plot_led(TYPEPAD, 91, MAXLED, 0, MAXLED);
+  hal_plot_led(TYPEPAD, 92, 0, MAXLED, 0);
+  hal_plot_led(TYPEPAD, 93, MAXLED, 0, 0);
+  hal_plot_led(TYPEPAD, 94, 0, MAXLED, MAXLED);
 
   // example - light the LEDs to say hello !
 

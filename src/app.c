@@ -151,15 +151,6 @@ void app_timer_event()
 {
 #define TICK_MS 500
 
-  if (held_button_index)
-  {
-    hal_plot_led(TYPEPAD, 1, 0, 0, MAXLED);
-  }
-  else
-  {
-    hal_plot_led(TYPEPAD, 1, 0, 0, 0);
-  }
-
   static u16 ms = TICK_MS;
   if (++ms >= TICK_MS)
   {

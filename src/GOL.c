@@ -56,6 +56,50 @@ u8 display_state[BUTTON_COUNT] = {0};
 u8 temp_state[BUTTON_COUNT] = {0};
 u8 beat = 0;
 
+u8 is_cell_alive(u8 x, u8 y)
+{
+  return x > 0 && x < 9 && y > 0 && y < 9 && display_state[x + y * 10];
+}
+
+u8 count_cell_neighbors(u8 x, u8 y)
+{
+  u8 count = 0;
+  count += is_cell_alive(x - 1, y - 1);
+  count += is_cell_alive(x, y - 1);
+  count += is_cell_alive(x + 1, y - 1);
+  count += is_cell_alive(x - 1, y);
+  count += is_cell_alive(x + 1, y);
+  count += is_cell_alive(x - 1, y + 1);
+  count += is_cell_alive(x, y + 1);
+  count += is_cell_alive(x + 1, y + 1);
+  return count;
+}
+
+u8 does_cell_live(u8 x, u8 y)
+{
+  u8 alive = is_cell_alive(x, y);
+  u8 neighbors = count_cell_neighbors(x, y);
+  if (alive)
+  {
+    if (neighbors < 2)
+    {
+      return 0;
+    }
+    if (neighbors > 3)
+    {
+      return 0;
+    }
+  }
+  else
+  {
+    if (neighbors == 3)
+    {
+      return 1;
+    }
+  }
+  return alive;
+}
+
 //______________________________________________________________________________
 
 void app_surface_event(u8 type, u8 index, u8 value)
@@ -101,14 +145,37 @@ void app_timer_event()
 #define TICK_MS 500
 
   static u16 ms = TICK_MS;
+  //   static u8 tick = 0;
   if (++ms >= TICK_MS)
   {
     ms = 0;
+    //     if (++tick <= BUTTON_COUNT)
+    //     {
+    //       hal_plot_led(TYPEPAD, tick, 0, 0, MAXLED);
+    //     }
+    //     // send a clock pulse up the USB
+    //   }
+    for (int i = 1; i < 9; ++i)
+    {
+      for (int j = 1; j < 9; ++j)
+      {
+        // u8 b = g_Buttons[j * 10 + i];
 
+        temp_state[j * 10 + i] = does_cell_live(i, j);
+        hal_plot_led(TYPEPAD, j * 10 + i, 0, 0, temp_state[j * 10 + i] * MAXLED);
+      }
+    }
+
+    memcpy(display_state, temp_state, sizeof(display_state));
     beat = !beat;
     hal_plot_led(TYPEPAD, 1, 0, beat * MAXLED, 0);
   }
 }
+
+// u8 is_pad_index(u8 index)
+// {
+//   return index > 7;
+// }
 
 //______________________________________________________________________________
 
@@ -119,6 +186,12 @@ void app_init(const u16 *adc_raw)
 
   // example - light the LEDs to say hello !
 
+  display_state[11] = 1;
+  hal_plot_led(TYPEPAD, 11, 0, 0, MAXLED);
+  display_state[12] = 1;
+  hal_plot_led(TYPEPAD, 12, 0, 0, MAXLED);
+  display_state[22] = 1;
+  hal_plot_led(TYPEPAD, 22, 0, 0, MAXLED);
   // for (int i = 1; i < 9; ++i)
   // {
   //   for (int j = 1; j < 9; ++j)

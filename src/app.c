@@ -105,16 +105,25 @@ void app_surface_event(u8 type, u8 index, u8 value)
       {
         held_button_index = 0;
       }
+      return;
     }
-
-    if (held_button_index)
+    // anding with value ensures this only triggers on a down press
+    if (held_button_index && value)
     {
-      display_state[index].input_index = held_button_index;
-      display_state[index].type = INPUT;
+      if (display_state[index].input_index == held_button_index)
+      {
+        display_state[index].input_index = 0;
+        display_state[index].type = EMPTY;
+        hal_plot_led(TYPEPAD, index, MAXLED, 0, 0);
+      }
+      else
+      {
+        display_state[index].input_index = held_button_index;
+        display_state[index].type = INPUT;
+        hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
+      }
     }
 
-    // example - light / extinguish pad LEDs
-    // hal_plot_led(TYPEPAD, index, 0, 0, display_state[index].output * MAXLED);
     break;
   }
   }
@@ -141,6 +150,15 @@ void app_cable_event(u8 type, u8 value) {}
 void app_timer_event()
 {
 #define TICK_MS 500
+
+  if (held_button_index)
+  {
+    hal_plot_led(TYPEPAD, 1, 0, 0, MAXLED);
+  }
+  else
+  {
+    hal_plot_led(TYPEPAD, 1, 0, 0, 0);
+  }
 
   static u16 ms = TICK_MS;
   if (++ms >= TICK_MS)
@@ -180,6 +198,10 @@ void app_timer_event()
             break;
           }
           last_row_value = display_state[index].output;
+        }
+        else if (display_state[index].type == EMPTY)
+        {
+          display_state[index].output = 0;
         }
         hal_plot_led(TYPEPAD, index, 0, 0, display_state[index].output * MAXLED);
       }

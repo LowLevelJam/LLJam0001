@@ -51,6 +51,11 @@
 
 // buffer to store pad states for flash save
 #define BUTTON_COUNT 100
+#define CLOCK_INDEX 10
+#define AND_INDEX 91
+#define OR_INDEX 92
+#define XOR_INDEX 93
+#define NOT_INDEX 94
 
 enum CELL_TYPE
 {
@@ -86,7 +91,7 @@ u8 held_button_index = 0;
 u8 is_input_button(u8 index)
 {
   // TODO: check if this is an input button
-  return index == 10;
+  return index == 10 || (index > 90 && index < 95);
 }
 
 void app_surface_event(u8 type, u8 index, u8 value)
@@ -118,12 +123,57 @@ void app_surface_event(u8 type, u8 index, u8 value)
       }
       else
       {
-        display_state[index].input_index = held_button_index;
-        display_state[index].type = INPUT;
-        hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
+        switch (held_button_index)
+        {
+        case CLOCK_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].type = INPUT;
+          hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
+          break;
+        }
+        case AND_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].gate_type = AND;
+          display_state[index].type = GATE;
+          display_state[index].gate_input_index_a = index - 1;
+          display_state[index].gate_input_index_b = index - 2;
+          hal_plot_led(TYPEPAD, index, 0, 0, MAXLED);
+          break;
+        }
+        case OR_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].gate_type = OR;
+          display_state[index].type = GATE;
+          display_state[index].gate_input_index_a = index - 1;
+          display_state[index].gate_input_index_b = index - 2;
+          hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
+          break;
+        }
+        case XOR_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].gate_type = XOR;
+          display_state[index].type = GATE;
+          display_state[index].gate_input_index_a = index - 1;
+          display_state[index].gate_input_index_b = index - 2;
+          hal_plot_led(TYPEPAD, index, MAXLED, 0, 0);
+          break;
+        }
+        case NOT_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].gate_type = NOT;
+          display_state[index].type = GATE;
+          display_state[index].gate_input_index_a = index - 1;
+          hal_plot_led(TYPEPAD, index, 0, 0, MAXLED);
+          break;
+        }
+        }
       }
     }
-
     break;
   }
   }
@@ -177,18 +227,23 @@ void app_timer_event()
           {
           case AND:
             display_state[index].output = a && b;
+            hal_plot_led(TYPEPAD, index, MAXLED, 0, MAXLED);
             break;
           case OR:
             display_state[index].output = a || b;
+            hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
             break;
           case XOR:
             display_state[index].output = a ^ b;
+            hal_plot_led(TYPEPAD, index, MAXLED, 0, 0);
             break;
           case NOT:
             display_state[index].output = !a;
+            hal_plot_led(TYPEPAD, index, 0, MAXLED, MAXLED);
             break;
           }
           last_row_value = display_state[index].output;
+          continue;
         }
         else if (display_state[index].type == EMPTY)
         {

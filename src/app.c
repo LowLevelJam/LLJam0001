@@ -91,7 +91,7 @@ u8 held_button_index = 0;
 u8 is_input_button(u8 index)
 {
   // TODO: check if this is an input button
-  return index == 10 || (index > 90 && index < 95);
+  return index == 10 || (index > 90 && index < 95) || index == 19 || index == 29 || index == 39 || index == 49 || index == 59 || index == 69 || index == 79 || index == 89;
 }
 
 void app_surface_event(u8 type, u8 index, u8 value)
@@ -125,13 +125,7 @@ void app_surface_event(u8 type, u8 index, u8 value)
       {
         switch (held_button_index)
         {
-        case CLOCK_INDEX:
-        {
-          display_state[index].input_index = held_button_index;
-          display_state[index].type = INPUT;
-          hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
-          break;
-        }
+
         case AND_INDEX:
         {
           display_state[index].input_index = held_button_index;
@@ -169,6 +163,13 @@ void app_surface_event(u8 type, u8 index, u8 value)
           display_state[index].type = GATE;
           display_state[index].gate_input_index_a = index - 1;
           hal_plot_led(TYPEPAD, index, 0, 0, MAXLED);
+          break;
+        }
+        default:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].type = INPUT;
+          hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
           break;
         }
         }

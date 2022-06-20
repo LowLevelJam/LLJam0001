@@ -56,6 +56,8 @@
 #define OR_INDEX 92
 #define XOR_INDEX 93
 #define NOT_INDEX 94
+#define NAND_INDEX 95
+#define NOR_INDEX 96
 
 enum CELL_TYPE
 {
@@ -70,6 +72,8 @@ enum GATE_TYPE
   OR = 1,
   XOR = 2,
   NOT = 3,
+  NAND = 4,
+  NOR = 5,
 };
 
 struct cell
@@ -91,7 +95,13 @@ u8 held_button_index = 0;
 u8 is_input_button(u8 index)
 {
   // TODO: check if this is an input button
-  return index == 10 || (index > 90 && index < 95) || index == 19 || index == 29 || index == 39 || index == 49 || index == 59 || index == 69 || index == 79 || index == 89;
+  return index == 10 || (index > 90 && index < 97) || (index > 0 && index < 9) || index == 19 || index == 29 || index == 39 || index == 49 || index == 59 || index == 69 || index == 79 || index == 89;
+}
+
+// user input buttons range from 1 to 8
+u8 is_user_input_button(u8 index)
+{
+  return index > 0 && index < 9;
 }
 
 void app_surface_event(u8 type, u8 index, u8 value)
@@ -109,6 +119,12 @@ void app_surface_event(u8 type, u8 index, u8 value)
       else
       {
         held_button_index = 0;
+      }
+      if (is_user_input_button(index))
+      {
+        // display_state[index].type = INPUT;
+        // display_state[index].input_index = index;
+        display_state[index].output = value ? 1 : 0;
       }
       return;
     }
@@ -165,6 +181,26 @@ void app_surface_event(u8 type, u8 index, u8 value)
           hal_plot_led(TYPEPAD, index, 0, 0, MAXLED);
           break;
         }
+        case NAND_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].gate_type = NAND;
+          display_state[index].type = GATE;
+          display_state[index].gate_input_index_a = index - 1;
+          display_state[index].gate_input_index_b = index - 2;
+          hal_plot_led(TYPEPAD, index, MAXLED / 2, 0, MAXLED / 2);
+          break;
+        }
+        case NOR_INDEX:
+        {
+          display_state[index].input_index = held_button_index;
+          display_state[index].gate_type = NOR;
+          display_state[index].type = GATE;
+          display_state[index].gate_input_index_a = index - 1;
+          display_state[index].gate_input_index_b = index - 2;
+          hal_plot_led(TYPEPAD, index, 0, MAXLED / 2, 0);
+          break;
+        }
         default:
         {
           display_state[index].input_index = held_button_index;
@@ -207,88 +243,63 @@ void app_timer_event()
   {
     ms = 0;
     display_state[10].output = !display_state[10].output;
-
-    // for (u8 i = 0; i < BUTTON_COUNT - 10; i++)
-    for (u8 y = 1; y < 9; y++)
-    {
-      u8 last_row_value = 0;
-      for (u8 x = 1; x < 9; x++)
-      {
-        u8 index = x + y * 10;
-        if (display_state[index].type == INPUT)
-        {
-          display_state[index].output = display_state[display_state[index].input_index].output;
-          last_row_value = display_state[index].output;
-        }
-        else if (display_state[index].type == GATE)
-        {
-          u8 a = display_state[display_state[index].gate_input_index_a].output;
-          u8 b = display_state[display_state[index].gate_input_index_b].output;
-          switch (display_state[index].gate_type)
-          {
-          case AND:
-            display_state[index].output = a && b;
-            hal_plot_led(TYPEPAD, index, MAXLED, 0, MAXLED);
-            break;
-          case OR:
-            display_state[index].output = a || b;
-            hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
-            break;
-          case XOR:
-            display_state[index].output = a ^ b;
-            hal_plot_led(TYPEPAD, index, MAXLED, 0, 0);
-            break;
-          case NOT:
-            display_state[index].output = !a;
-            hal_plot_led(TYPEPAD, index, 0, MAXLED, MAXLED);
-            break;
-          }
-          last_row_value = display_state[index].output;
-          continue;
-        }
-        else if (display_state[index].type == EMPTY)
-        {
-          display_state[index].output = 0;
-        }
-        hal_plot_led(TYPEPAD, index, 0, 0, display_state[index].output * MAXLED);
-      }
-      display_state[y * 10 + 9].output = last_row_value;
-      hal_plot_led(TYPEPAD, y * 10 + 9, 0, 0, display_state[y * 10 + 9].output * MAXLED);
-    }
-    hal_plot_led(TYPEPAD, 10, 0, 0, display_state[10].output * MAXLED);
-    // {
-    //   if (display_state[i].type == INPUT)
-    //   {
-    //     display_state[i].output = display_state[display_state[i].input_index].output;
-    //   }
-    //   else if (display_state[i].type == GATE)
-    //   {
-    //     u8 a = display_state[display_state[i].gate_input_index_a].output;
-    //     u8 b = display_state[display_state[i].gate_input_index_b].output;
-    //     u8 output = 0;
-    //     switch (display_state[i].gate_type)
-    //     {
-    //     case AND:
-    //       output = a & b;
-    //       break;
-    //     case OR:
-    //       output = a | b;
-    //       break;
-    //     case XOR:
-    //       output = a ^ b;
-    //       break;
-    //     case NOT:
-    //       output = !a;
-    //       break;
-    //     }
-    //     display_state[i].output = output;
-    //   }
-
-    //   hal_plot_led(TYPEPAD, i, 0, 0, display_state[i].output * MAXLED);
-    // }
-
-    // hal_plot_led(TYPEPAD, 10, 0, display_state[10].output * MAXLED, 0);
   }
+  // for (u8 i = 0; i < BUTTON_COUNT - 10; i++)
+  for (u8 y = 1; y < 9; y++)
+  {
+    u8 last_row_value = 0;
+    for (u8 x = 1; x < 9; x++)
+    {
+      u8 index = x + y * 10;
+      if (display_state[index].type == INPUT)
+      {
+        display_state[index].output = display_state[display_state[index].input_index].output;
+        last_row_value = display_state[index].output;
+      }
+      else if (display_state[index].type == GATE)
+      {
+        u8 a = display_state[display_state[index].gate_input_index_a].output;
+        u8 b = display_state[display_state[index].gate_input_index_b].output;
+        switch (display_state[index].gate_type)
+        {
+        case AND:
+          display_state[index].output = a && b;
+          hal_plot_led(TYPEPAD, index, MAXLED, 0, MAXLED);
+          break;
+        case OR:
+          display_state[index].output = a || b;
+          hal_plot_led(TYPEPAD, index, 0, MAXLED, 0);
+          break;
+        case XOR:
+          display_state[index].output = a ^ b;
+          hal_plot_led(TYPEPAD, index, MAXLED, 0, 0);
+          break;
+        case NOT:
+          display_state[index].output = !a;
+          hal_plot_led(TYPEPAD, index, 0, MAXLED, MAXLED);
+          break;
+        case NAND:
+          display_state[index].output = !(a && b);
+          hal_plot_led(TYPEPAD, index, MAXLED, MAXLED, 0);
+          break;
+        case NOR:
+          display_state[index].output = !(a || b);
+          hal_plot_led(TYPEPAD, index, MAXLED, MAXLED, MAXLED);
+          break;
+        }
+        last_row_value = display_state[index].output;
+        continue;
+      }
+      else if (display_state[index].type == EMPTY)
+      {
+        display_state[index].output = 0;
+      }
+      hal_plot_led(TYPEPAD, index, 0, 0, display_state[index].output * MAXLED);
+    }
+    display_state[y * 10 + 9].output = last_row_value;
+    hal_plot_led(TYPEPAD, y * 10 + 9, 0, 0, display_state[y * 10 + 9].output * MAXLED);
+  }
+  hal_plot_led(TYPEPAD, 10, 0, 0, display_state[10].output * MAXLED);
 }
 
 //______________________________________________________________________________
@@ -302,6 +313,8 @@ void app_init(const u16 *adc_raw)
   hal_plot_led(TYPEPAD, 92, 0, MAXLED, 0);
   hal_plot_led(TYPEPAD, 93, MAXLED, 0, 0);
   hal_plot_led(TYPEPAD, 94, 0, MAXLED, MAXLED);
+  hal_plot_led(TYPEPAD, 95, MAXLED, MAXLED, 0);
+  hal_plot_led(TYPEPAD, 96, MAXLED, MAXLED, MAXLED);
 
   // example - light the LEDs to say hello !
 

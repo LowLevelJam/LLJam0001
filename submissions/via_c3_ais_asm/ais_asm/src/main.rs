@@ -5,9 +5,9 @@ use crate::ais::{decode, AisError, Instruction, Opcode, Register, SubOp};
 use crate::dynasm::{DynAsm, DynAsmError};
 
 use std::collections::VecDeque;
+use std::fs::File;
 use std::io::Write;
 use std::process::Command;
-use tempfile::NamedTempFile;
 
 #[derive(Debug)]
 enum TopError {
@@ -39,15 +39,12 @@ fn main() -> Result<(), TopError> {
         "EBX".into(),
     ))?;
 
-    let mut temp = NamedTempFile::new()?;
-    temp.by_ref().write_all(&asm.data())?;
-    temp.flush()?;
-
-    let file_name = temp.path().as_os_str();
+    let mut output = File::create("out.bin")?;
+    output.by_ref().write_all(&asm.data())?;
+    output.flush()?;
 
     let output = Command::new("objdump")
-        .args(["-D", "-bbinary", "-mi386", "-Mintel"])
-        .arg(file_name)
+        .args(["-D", "-bbinary", "-mi386", "-Mintel", "out.bin"])
         .output()?;
 
     println!("{}", std::str::from_utf8(&output.stdout).unwrap());

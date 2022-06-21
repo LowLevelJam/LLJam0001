@@ -35,5 +35,9 @@ First coding session. Setup ASM encoder and decoder, and a very basic assembler.
 Kind of burned out by yesterdays long session, and tired by short night. Also has some other IRL stuff, so no second long session.
 Cleaned up yesterdays code and started with log.
 
-### Day 4:
+### Day 4: 4h
 Added the intro.
+Copied pieces of an old kernel, this will only be used as loader for the AIS payload.
+Tested kernel with QEMU but AIS will not run under QEMU, so next step is to move to real hardware.
+
+### Day 5:

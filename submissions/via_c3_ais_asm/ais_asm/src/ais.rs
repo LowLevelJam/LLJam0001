@@ -313,8 +313,8 @@ impl Instruction {
 
             let instr = op | rs | rt | imm;
 
-            data.extend_from_slice(&[0x8D, 0x84, 0x00]);
-            data.extend_from_slice(&instr.to_be_bytes());
+            data.extend_from_slice(&[0x62, 0x80]);
+            data.extend_from_slice(&instr.to_le_bytes());
         } else if self.is_xalu_type() {
             let op = self.encode_opcode()?;
             let rs = self.encode_rs()?;
@@ -324,8 +324,8 @@ impl Instruction {
 
             let instr = op | rs | rt | rd | subop;
 
-            data.extend_from_slice(&[0x8D, 0x84, 0x00]);
-            data.extend_from_slice(&instr.to_be_bytes());
+            data.extend_from_slice(&[0x62, 0x80]);
+            data.extend_from_slice(&instr.to_le_bytes());
         } else if self.is_xalui_type() {
             let op = self.encode_opcode()?;
             let rs = self.encode_rs()?;
@@ -335,8 +335,8 @@ impl Instruction {
 
             let instr = op | rs | c | rd | subop;
 
-            data.extend_from_slice(&[0x8D, 0x84, 0x00]);
-            data.extend_from_slice(&instr.to_be_bytes());
+            data.extend_from_slice(&[0x62, 0x80]);
+            data.extend_from_slice(&instr.to_le_bytes());
         } else {
             return Err(AisError::Unsupported(self.clone()));
         }
@@ -428,19 +428,19 @@ fn decode_opcode(word: u32) -> Result<Opcode, AisError> {
 }
 
 pub fn decode(mut bytes: VecDeque<u8>) -> Result<(VecDeque<u8>, Instruction), AisError> {
-    if bytes.len() < 7 {
+    if bytes.len() < 6 {
         return Err(AisError::DecodeError(bytes));
     }
 
     let mut iter = bytes.iter();
-    let header: Vec<u8> = iter.by_ref().take(3).copied().collect();
+    let header: Vec<u8> = iter.by_ref().take(2).copied().collect();
 
-    if header != [0x8D, 0x84, 0x00] {
+    if header != [0x62, 0x80] {
         return Err(AisError::DecodeError(bytes));
     }
 
     let word_bytes: Vec<u8> = iter.take(4).copied().collect();
-    let word = u32::from_be_bytes(word_bytes.try_into().unwrap());
+    let word = u32::from_le_bytes(word_bytes.try_into().unwrap());
 
     let opcode = decode_opcode(word)?;
     let mut instr = Instruction::new(opcode);
@@ -465,7 +465,7 @@ pub fn decode(mut bytes: VecDeque<u8>) -> Result<(VecDeque<u8>, Instruction), Ai
         instr.rd = Some(Register::Index(rd_bits));
     }
 
-    bytes.drain(0..7);
+    bytes.drain(0..6);
 
     Ok((bytes, instr))
 }

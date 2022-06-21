@@ -26,7 +26,7 @@ impl DynAsm {
         Ok(())
     }
 
-    pub fn data(&self) -> Vec<u8> {
-        self.data.clone()
+    pub fn data(&self) -> &Vec<u8> {
+        &self.data
     }
 }

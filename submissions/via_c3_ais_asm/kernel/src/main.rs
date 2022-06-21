@@ -31,17 +31,17 @@ pub fn multiboot_entry(_: &[u8]) {
     let fcr = unsafe { asm::rdmsr(0x1107) };
     println!("FCR: {:16X}", fcr);
 
-    assert!(
-        fcr & 0x0001 != 0,
-        "This processor doens't have support for VIA C3 AIS"
-    );
+    // assert!(
+    //     fcr & 0x0001 != 0,
+    //     "This processor doens't have support for VIA C3 AIS"
+    // );
 
-    unsafe {
-        asm!(
-            ".byte 0x0f, 0x3f",
-            //"lea eax, [eax+eax*1+{tag}]",
-            //tag = sym PAYLOAD,
-            options(noreturn)
-        );
-    };
+    println!("r = {:8X}", PAYLOAD.as_ptr() as u32);
+
+    let payload: extern "C" fn() -> u32 = unsafe { core::mem::transmute(PAYLOAD.as_ptr()) };
+    let r = payload();
+
+
+    println!("r = {:8X}", r);
+
 }

@@ -1,4 +1,4 @@
-use core::arch::asm;
+use crate::asm;
 use core::fmt::{Error, Write};
 
 pub struct Uart {
@@ -26,7 +26,7 @@ const LSR_EMPTY: u8 = 0x20;
 
 impl Uart {
     pub unsafe fn new(base: u16, baudrate: Baudrate) -> Self {
-        let this = Self { base: base };
+        let this = Self { base };
 
         this.setup(baudrate);
 
@@ -34,15 +34,11 @@ impl Uart {
     }
 
     fn read(&self, reg: Register) -> u8 {
-        let port = self.base + reg.0;
-        let value: u8;
-        unsafe { asm!("in al, dx", out("al") value, in("dx") port, options(nomem, nostack)) };
-        value
+        unsafe { asm::in8(self.base + (reg.0 as u16)) }
     }
 
     fn write(&self, reg: Register, value: u8) {
-        let port = self.base + reg.0;
-        unsafe { asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack)) };
+        unsafe { asm::out8(self.base + (reg.0 as u16), value) }
     }
 
     fn setup(&self, baudrate: Baudrate) {

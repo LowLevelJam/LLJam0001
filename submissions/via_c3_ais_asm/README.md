@@ -40,4 +40,8 @@ Added the intro.
 Copied pieces of an old kernel, this will only be used as loader for the AIS payload.
 Tested kernel with QEMU but AIS will not run under QEMU, so next step is to move to real hardware.
 
-### Day 5:
+### Day 5: 4h
+Dusted of test hardware and worked on getting code to run on it. After fixing some issues, I could run my addition example on VIA C3 with alternative instructions.
+Next step will be to add more support to the assembler and write a nice demo.
+
+### Day 6:

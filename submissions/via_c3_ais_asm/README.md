@@ -44,4 +44,7 @@ Tested kernel with QEMU but AIS will not run under QEMU, so next step is to move
 Dusted of test hardware and worked on getting code to run on it. After fixing some issues, I could run my addition example on VIA C3 with alternative instructions.
 Next step will be to add more support to the assembler and write a nice demo.
 
-### Day 6:
+### Day 6: 4h
+Worked on DynAsm symbol support, but could not really find a good use for it yet. AIS doesn't have conditional jumps, at least not according the leaked documents. And the unconditional jump is absolute, but I want/need my payload codegen to be position independent. And getting instruction pointer with AIS is done via XPUSHIP so I will need to look into that. There also no native call instruction, I think you need to perform a XPUSHIP and jump (XJ).
+
+### Day 7:

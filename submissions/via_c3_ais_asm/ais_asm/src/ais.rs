@@ -14,7 +14,7 @@ pub enum AisError {
     MissingConstant(Instruction),
     MissingSubOp(Instruction),
 
-    DecodeError(VecDeque<u8>),
+    DecodeError(Vec<u8>),
 
     UnknownOpcode(u32),
     UnknownSubOp(u32),
@@ -32,6 +32,7 @@ impl Register {
             Register::Index(x) if *x > 31 => Err(AisError::InvalidRegisterIndex(*x)),
             Register::Index(x) => Ok((*x).into()),
             Register::Name(x) => match x.as_str() {
+                "R4"  => Ok(4),
                 "EAX" => Ok(16),
                 "ECX" => Ok(17),
                 "EDX" => Ok(18),
@@ -61,7 +62,7 @@ pub enum Const {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Opcode {
     XJ,
 
@@ -134,13 +135,13 @@ pub enum SubOp {
 
 #[derive(Debug, Clone)]
 pub struct Instruction {
-    opcode: Opcode,
-    rs: Option<Register>,
-    rt: Option<Register>,
-    rd: Option<Register>,
-    imm: Option<u16>,
-    constant: Option<Const>,
-    subop: Option<SubOp>,
+    pub opcode: Opcode,
+    pub rs: Option<Register>,
+    pub rt: Option<Register>,
+    pub rd: Option<Register>,
+    pub imm: Option<u16>,
+    pub constant: Option<Const>,
+    pub subop: Option<SubOp>,
 }
 
 impl Instruction {
@@ -148,12 +149,18 @@ impl Instruction {
         Self {
             opcode,
             rs: None,
-            rt: None,
+            rt: None, // base
             rd: None,
             imm: None,
             constant: None,
             subop: None,
         }
+    }
+
+    pub fn j(base: Register) -> Self {
+        let mut ret = Self::new(Opcode::XJ);
+        ret.rt = Some(base);
+        ret
     }
 
     pub fn i_type(opcode: Opcode, dst: Register, src: Register, imm: u16) -> Self {
@@ -303,45 +310,86 @@ impl Instruction {
     }
 
     pub fn encode(&self) -> Result<Vec<u8>, AisError> {
+        let instr =
+            if self.is_i_type() {
+                let op = self.encode_opcode()?;
+                let rs = self.encode_rs()?;
+                let rt = self.encode_rt()?;
+                let imm = self.encode_imm()?;
+
+                op | rs | rt | imm
+            } else if self.is_xalu_type() {
+                let op = self.encode_opcode()?;
+                let rs = self.encode_rs()?;
+                let rt = self.encode_rt()?;
+                let rd = self.encode_rd()?;
+                let subop = self.encode_subop()?;
+
+                op | rs | rt | rd | subop
+            } else if self.is_xalui_type() {
+                let op = self.encode_opcode()?;
+                let rs = self.encode_rs()?;
+                let c = self.const_bits()?;
+                let rd = self.encode_rd()?;
+                let subop = self.encode_subop()?;
+
+                op | rs | c | rd | subop
+            } else if self.opcode == Opcode::XJ {
+                let op = self.encode_opcode()?;
+                let rt = self.encode_rt()?;
+
+                op | rt | 0b01_0001_11
+            } else {
+                return Err(AisError::Unsupported(self.clone()));
+            };
+
         let mut data = Vec::new();
+        data.extend_from_slice(&[0x62, 0x80]);
+        data.extend_from_slice(&instr.to_le_bytes());
+        Ok(data)
+    }
 
-        if self.is_i_type() {
-            let op = self.encode_opcode()?;
-            let rs = self.encode_rs()?;
-            let rt = self.encode_rt()?;
-            let imm = self.encode_imm()?;
+    pub fn decode(bytes: &[u8]) -> Result<(Instruction, usize), AisError> {
 
-            let instr = op | rs | rt | imm;
-
-            data.extend_from_slice(&[0x62, 0x80]);
-            data.extend_from_slice(&instr.to_le_bytes());
-        } else if self.is_xalu_type() {
-            let op = self.encode_opcode()?;
-            let rs = self.encode_rs()?;
-            let rt = self.encode_rt()?;
-            let rd = self.encode_rd()?;
-            let subop = self.encode_subop()?;
-
-            let instr = op | rs | rt | rd | subop;
-
-            data.extend_from_slice(&[0x62, 0x80]);
-            data.extend_from_slice(&instr.to_le_bytes());
-        } else if self.is_xalui_type() {
-            let op = self.encode_opcode()?;
-            let rs = self.encode_rs()?;
-            let c = self.const_bits()?;
-            let rd = self.encode_rd()?;
-            let subop = self.encode_subop()?;
-
-            let instr = op | rs | c | rd | subop;
-
-            data.extend_from_slice(&[0x62, 0x80]);
-            data.extend_from_slice(&instr.to_le_bytes());
-        } else {
-            return Err(AisError::Unsupported(self.clone()));
+        if bytes.len() < 6 {
+            return Err(AisError::DecodeError(bytes.into()));
         }
 
-        Ok(data)
+        let header = &bytes[0..2];
+        if header != [0x62, 0x80] {
+            return Err(AisError::DecodeError(bytes.into()));
+        }
+
+        let word = u32::from_le_bytes(bytes[2..6].try_into().unwrap());
+
+        let opcode = decode_opcode(word)?;
+        let mut instr = Instruction::new(opcode);
+
+        let rs_bits = ((word >> 21) & 0x1F).try_into().unwrap();
+        let rt_bits = ((word >> 16) & 0x1F).try_into().unwrap();
+        let rd_bits = ((word >> 11) & 0x1F).try_into().unwrap();
+        let imm_bits = (word & 0xFFFF).try_into().unwrap();
+
+        if instr.is_i_type() {
+            instr.rs = Some(Register::Index(rs_bits));
+            instr.rt = Some(Register::Index(rt_bits));
+            instr.imm = Some(imm_bits);
+        } else if instr.is_xalu_type() {
+            instr.subop = Some(decode_subop(word)?);
+            instr.rs = Some(Register::Index(rs_bits));
+            instr.rt = Some(Register::Index(rt_bits));
+            instr.rd = Some(Register::Index(rd_bits));
+        } else if instr.is_xalui_type() {
+            instr.subop = Some(decode_subop(word)?);
+            instr.rs = Some(Register::Index(rs_bits));
+            instr.rd = Some(Register::Index(rd_bits));
+        } else if instr.opcode == Opcode::XJ {
+            instr.rt = Some(Register::Index(rt_bits));
+        } else {
+            return Err(AisError::DecodeError(bytes.into()));
+        }
+
+        Ok((instr, 6))
     }
 }
 
@@ -425,47 +473,4 @@ fn decode_opcode(word: u32) -> Result<Opcode, AisError> {
     };
 
     Ok(opcode)
-}
-
-pub fn decode(mut bytes: VecDeque<u8>) -> Result<(VecDeque<u8>, Instruction), AisError> {
-    if bytes.len() < 6 {
-        return Err(AisError::DecodeError(bytes));
-    }
-
-    let mut iter = bytes.iter();
-    let header: Vec<u8> = iter.by_ref().take(2).copied().collect();
-
-    if header != [0x62, 0x80] {
-        return Err(AisError::DecodeError(bytes));
-    }
-
-    let word_bytes: Vec<u8> = iter.take(4).copied().collect();
-    let word = u32::from_le_bytes(word_bytes.try_into().unwrap());
-
-    let opcode = decode_opcode(word)?;
-    let mut instr = Instruction::new(opcode);
-
-    let rs_bits = ((word >> 21) & 0x1F).try_into().unwrap();
-    let rt_bits = ((word >> 16) & 0x1F).try_into().unwrap();
-    let rd_bits = ((word >> 11) & 0x1F).try_into().unwrap();
-    let imm_bits = (word & 0xFFFF).try_into().unwrap();
-
-    if instr.is_i_type() {
-        instr.rs = Some(Register::Index(rs_bits));
-        instr.rt = Some(Register::Index(rt_bits));
-        instr.imm = Some(imm_bits);
-    } else if instr.is_xalu_type() {
-        instr.subop = Some(decode_subop(word)?);
-        instr.rs = Some(Register::Index(rs_bits));
-        instr.rt = Some(Register::Index(rt_bits));
-        instr.rd = Some(Register::Index(rd_bits));
-    } else if instr.is_xalui_type() {
-        instr.subop = Some(decode_subop(word)?);
-        instr.rs = Some(Register::Index(rs_bits));
-        instr.rd = Some(Register::Index(rd_bits));
-    }
-
-    bytes.drain(0..6);
-
-    Ok((bytes, instr))
 }

@@ -1,7 +1,7 @@
 mod ais;
 mod dynasm;
 
-use crate::ais::{decode, AisError, Instruction, Opcode, Register, SubOp};
+use crate::ais::{AisError, Instruction, Opcode, Register, SubOp};
 use crate::dynasm::{DynAsm, DynAsmError};
 
 use std::collections::VecDeque;
@@ -28,17 +28,17 @@ impl From<std::io::Error> for TopError {
 }
 
 fn decode_bytes(b: &[u8]) {
-    let mut bytes: VecDeque<u8> = b.iter().copied().collect();
+    let mut bytes = b;
     loop {
 
         if bytes.is_empty() {
             break;
         }
 
-        match decode(bytes) {
-            Ok((b, i)) => {
+        match Instruction::decode(bytes) {
+            Ok((i, size)) => {
                 println!("{:?}", i);
-                bytes = b;
+                bytes = &bytes[size..];
             }
             Err(e) => {
                 println!("{:?}", e);
@@ -64,6 +64,7 @@ fn main() -> Result<(), TopError> {
 
     // Gen some code
     let mut asm = DynAsm::new();
+    
     asm.gen(Instruction::i_type(Opcode::ORI, "EAX".into(), 0.into(), 0x1300))?;
     asm.gen(Instruction::i_type(Opcode::ORI, "EBX".into(), 0.into(), 0x37))?;
     asm.gen(Instruction::xalu_type(
@@ -72,6 +73,12 @@ fn main() -> Result<(), TopError> {
         "EAX".into(),
         "EBX".into(),
     ))?;
+
+    let label = asm.new_sym();
+    asm.gen_jmp_near(label)?;
+    asm.set_sym_here(label)?;
+
+
 
     // Show dynamic assembled instructions
     decode_bytes(asm.data());

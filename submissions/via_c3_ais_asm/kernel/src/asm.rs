@@ -19,6 +19,7 @@ pub fn halt() {
     }
 }
 
+#[inline]
 pub unsafe fn rdmsr(msr: u32) -> u64 {
     let mut low: u32;
     let mut high: u32;
@@ -27,8 +28,41 @@ pub unsafe fn rdmsr(msr: u32) -> u64 {
     (high as u64) << 32 | (low as u64)
 }
 
+#[inline]
 pub unsafe fn wrmsr(msr: u32, val: u64) {
     let high = (val >> 32) as u32;
     let low = (val & 0xFFFF) as u32;
     asm!("wrmsr", in("ecx") msr, in("edx") high, in("eax") low, options(nomem, nostack));
+}
+
+#[inline]
+pub fn flags() -> u32 {
+    let flags;
+    unsafe {
+        asm!(
+            "pushfd",
+            "pop {flags}",
+            flags = out(reg) flags,
+            options(nomem, preserves_flags));
+    };
+    flags
+}
+
+#[inline]
+pub fn cpuid(val: u32) -> [u32; 4] {
+    let mut eax;
+    let mut ebx;
+    let mut ecx;
+    let mut edx;
+
+    unsafe {
+        asm!("cpuid", 
+        inout("eax") val => eax,
+        out("ebx") ebx,
+        out("ecx") ecx,
+        out("edx") edx,
+        options(nomem, nostack));
+    }
+
+    [eax,ebx,ecx,edx]
 }

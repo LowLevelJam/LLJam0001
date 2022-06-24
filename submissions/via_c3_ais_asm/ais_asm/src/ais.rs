@@ -20,7 +20,6 @@ pub enum AisError {
     DecodeIssue,
 
     UnknownOpcode(u32),
-    UnknownSubOp(u32),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -94,6 +93,7 @@ pub enum SubOpXio {
 
 #[derive(Debug, Copy, Clone, FromPrimitive)]
 pub enum AddrSize {
+    Bits16 = 0b10,
     Bits32 = 0b11,
 }
 
@@ -213,8 +213,6 @@ impl Instruction {
         }
     }
 
-
-
     pub fn i_type(opcode: Opcode, dst: Register, src: Register, imm: u16) -> Self {
         let mut ret = Self::new(opcode);
         ret.rs = Some(src);
@@ -257,7 +255,7 @@ impl Instruction {
         let mut instr = Instruction::xls_type(Opcode::XIOW, value, port, Offset::Number(0));
         instr.function = Some(Function::Xls(
             SubOpXls::Xio(SubOpXio::Norm),
-            AddrSize::Bits32,
+            AddrSize::Bits16,
             size,
             Sel::Flat,
         ));
@@ -268,7 +266,7 @@ impl Instruction {
         let mut instr = Instruction::xls_type(Opcode::XIOR, value, port, Offset::Number(0));
         instr.function = Some(Function::Xls(
             SubOpXls::Xio(SubOpXio::Norm),
-            AddrSize::Bits32,
+            AddrSize::Bits16,
             size,
             Sel::Flat,
         ));
@@ -423,13 +421,15 @@ impl Instruction {
             let op = self.encode_opcode()?;
             let rt = self.encode_rt()?;
 
-            op | rt | 0b01_0001_00
+            op | rt | 0b01_0001_00 // 32bit & stay in AIS mode
         } else if matches!(self.opcode, Opcode::XIOR | Opcode::XIOW) {
             let op = self.encode_opcode()?;
             let rs = self.encode_rs()?;
             let base = self.encode_rt()?;
             let offset = self.encode_offset()?;
             let function = self.encode_function()?;
+
+            assert!(function == 0b00_1_00_1010_1_0);
 
             op | rs | base | offset | function
         } else {
@@ -481,8 +481,7 @@ impl Instruction {
             instr.rs = Some(Register::Index(rs_bits));
             instr.rt = Some(Register::Index(rt_bits));
             instr.offset = Some(Offset::Number(0)); //FIXME
-            //instr.function = Some()
-
+                                                    //instr.function = Some()
         } else {
             return Err(AisError::DecodeError(bytes.into()));
         }

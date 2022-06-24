@@ -20,35 +20,35 @@ const PAYLOAD_LEN: usize = core::include_bytes!("../../ais_asm/out.bin").len();
 static PAYLOAD: [u8; PAYLOAD_LEN] = *core::include_bytes!("../../ais_asm/out.bin");
 
 pub fn multiboot_entry(_: &[u8]) {
-    println!("Hello world!");
+    println!("");
+    println!("Kernel started");
 
-    let fcr = unsafe { asm::rdmsr(0x1107) };
-    println!("FCR: {:16X}", fcr);
-
-    let fcr = fcr | 0x0001;
+    // Enable AIS
     unsafe {
-        asm::wrmsr(0x1107, fcr);
+        let fcr= asm::rdmsr(0x1107);
+        asm::wrmsr(0x1107, fcr | 0x0001);
     }
 
-    let fcr = unsafe { asm::rdmsr(0x1107) };
-    println!("FCR: {:16X}", fcr);
+    // Test Centaur Extended Features Flags
+    let flags = asm::cpuid(0xC0000001);
+    assert!(
+        flags[3] & 3 == 3,
+        "AIS is not supported or not enabled"
+    );
 
-    // assert!(
-    //     fcr & 0x0001 != 0,
-    //     "This processor doens't have support for VIA C3 AIS"
-    // );
+    println!("Run payload at 0x{:08X}", PAYLOAD.as_ptr() as u32);
 
-    println!("r = {:8X}", PAYLOAD.as_ptr() as u32);
-
-
+    // Flush serial
     while !SERIAL1.lock().tx_empty() {
         core::hint::spin_loop()
     }
 
+    // Run payload
     let payload: extern "C" fn() -> u32 = unsafe { core::mem::transmute(PAYLOAD.as_ptr()) };
     let r = payload();
 
-
-    println!("r = {:8X}", r);
+    // Show result
+    println!("Result EAX = 0x{:08X}", r);
+    println!("");
 
 }

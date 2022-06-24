@@ -51,4 +51,4 @@ Worked on DynAsm symbol support, but could not really find a good use for it yet
 Tried to get IO port writes to work so it is possible to send bytes from within AIS code. Couldn't get that to work. Still some time left tomorrow, but will need to finish the assembler, write some demo with stuff that does work. And looking into how submit the project.
 
 ### Day 8: TBD, but < 10.5h until deadline
-Loaded PAYLOAD at known possition and got jumps working. Next step is to finish DynAsm symbol support.
+Loaded PAYLOAD at known position and got jumps working. Next step is to finish DynAsm symbol support.

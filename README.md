@@ -1,154 +1,136 @@
-[![Build Status](https://travis-ci.org/dvhdr/launchpad-pro.svg?branch=master)](https://travis-ci.org/dvhdr/launchpad-pro)
+# The main idea 💡
+Since the theme of the project is 'small but mighty' I looked for what I had lying around which qualified. 
+I knew from past experience that an open source SDK had been made available for making custom firmware for the Novation Launchpad Pro and it's and area I'd been wanting to dip back into.
+Originally the plan was to build a rudimentary calculator using the pad interface. 
+Calculators are usually a good starter project. However I quickly scrapped that for the idea of instead implementing a boolean logic simulator.
+The idea of building up logic circuits only through the pads seemed interesting but also approachable.
+(It also avoids the issue of handling infix operators and nesting c:)
+The general specification came together in my head while I got re-aquatinted with the SDK and build process (more on that later). 
+The main requirements were
+* Have several gates which can be placed anywhere on the grid
+* Have a system generated clock
+* Have user input buttons
+* Each row outputs the value of the last pad to its row terminator
+* All signals from the perimeter buttons can be routed anywhere on the grid
 
-# Launchpad Pro
-Open source firmware for the Novation Launchpad Pro grid controller!  By customising this code, you can:
+## A quick aside 📜
+I will make a distinction between pads and buttons in this document. 
+Pads are the white squares in the middle of the device.
+Buttons are the circular bits around the border.
+# Initial setup 🧱
+It took a minute to re-locate [the SDK repo](https://github.com/dvhdr/launchpad-pro). 
+Once I did I found that it hasn't seen any activity in 4 years.
+Normally this would be a red flag, and honestly, it was, but I really didn't want to re-implement this all myself. 
+My fears turned out to be unfounded as the code works flawlessly! 
+The repo outlines in good detail the build process.
+It neglects to mention that anyone using the SDK needs to install the git submodules. 
+That tripped me up for a bit before I noticed the `.gitmodules` config file.
+With that set up, running the docker container and `make` inside it seemed to work flawlessly!
 
-- Implement your own unique standalone apps
-- Create chorders, sequencers, light shows, games and more
-- Have fun!
+# The firmware upload nightmare 👻
+It is now relevant to discuss what exactly the Launchpad *is* for anyone who might not know. 
+Simply, it is a MIDI controller: a device built to send MIDI messages back to a computer or other music hardware. 
+MIDI: Musical Instrument Digital Interface, is a protocol from the early 80s used primarily by music devices to send information. 
+It's normal uses are for sending note information: pitch, how hard ta key was hit, etc. 
+There is, however, an extension to the MIDI spec called SysEx MIDI. 
+SysEx MIDI: System Exclusive MIDI (refereed to as SysEx) is a device specific extension to the base MIDI standard. 
+SysEx messages can be used to configure options about a piece of music hardware. 
+The specifics of the messages are set by the manufacturer, there is no set standard.
+In this case, SysEx is used to completely re-write the firmware of the Launchpad itself.
+So where you might upload a `.hex` or a `.bin` file to other devices, here we send a `.syx`. 
 
-You'll definitely need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
+The *nightmare* comes in actually *doing* the uploading. 
+This is a standard which hadn't been updated since the 80s by the time this device came out. 
+And even then, according to sources I've found, SysEx is mostly used by older hardware. 
+Given this, the tools for sending SysEx are sparse at best. 
+The one most commonly recommended, [MIDI-OX](http://midiox.com/), appears to not have been updated since Windows XP days.
+Nevertheless I gave it a shot. The UI leaves much to be desired by modern standards but if the tool works, it works. 
+It didn't work.
+Whatever I tried I kept getting one error after another. 
+The most confusing of which was the assertion that my computer didn't have enough memory to process the upload. 
+I checked, it had 15GB free at the time.
+Other times it wouldn't detect that the device was connected.
+There were a few just out and out crashes too in the mix.
+Overall, not a satisfactory experience to say the least.
+So I searched for an alternative.
 
-# Philosophy
-We could have released the full source for the factory shipping firmware, but we decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad Pro, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
+The *only* other option I could find was from the Windows Store of all places.
+Simply titled "MIDI SysEx file transfer utility" it seemed to do all I needed and nothing more.
 
-- There is no value in customising low level routines such as LED multiplexing or ADC scanning - this code has been carefully tweaked over many months to deliver the best results, and is not something you'd want to mess with.
-- There is very little value in customising main() or other low level features, and again these things are hard to do well.  Interrupt priorities? No.
-- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the phone calls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality. In addition, the "Live" USB MIDI port has been removed, and the device has a different name and USB PID.
-- If we left the Ableton integration and menu structure in place, open firmware developers would have to work around it.  They would also potentially consume precious RAM/CPU resources.  I've a feeling this isn't what you'd want, but we're interested to hear your feedback.
-- Licensing requirements for the CMSIS library version we use are ambiguous.  Yes, we could port to the public version, but why bother, given the above reasoning - I'd prefer to spend my time on good documentation and examples.  As such, all the CMSIS code is compiled into launchpad_pro.a, and we do not need to distribute the headers.
+At first it *also* gave me no end of errors, these ones much less helpful, amounting to essential "Something went wrong."
+However... after many restarts of the application, the Launchpad, and my whole PC, I managed to get the example firmware to upload. 
+Needless to say, I was elated.
 
-I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging the process too](http://launchpadfirmware.tumblr.com/) if you'd like to read my musings.
+The nightmare wasn't quite over though. 
+Any time I went to upload the latest build there was a chance it would fail and I'd have to go through the whole dark ritual of getting it to work again.
+But I figured out the set of things to keep trying in random order until I could consistently get it going again in just a few minutes.
 
-# Setup the Development Environment
+With the process more or less locked down, I set to work actually learning the SDK. 
 
-## Using Docker
+# Testing the waters: Game of Life 🌿
+Given the fact that I was staring at a light up grid it seemed natural to get aquatinted with the development process by implementing Conway's Game of Life.
+The only documentation given for the SDK is the example code provided.
+While not a lot, I actually found that to be enough to get through everything I wanted to do.
+I began by figuring out which of the supplied callback functions I could safely ignore.
+That turned out to be quite a few.
+Since I don't actually care about handling MIDI messages I could leave only stubs of the callbacks which handle that.
+The main three I concerned myself with were:
+* The first time setup function `app_init`
+* The main loop `app_timer_event`. The SDK author claims this runs every millisecond, I have no way to confirm this but it seems about right.
+* The pad event handler `app_surface_event`
 
-If your system is running docker you can easily setup the environment with:
+The example code already had an array for storing the states of all the pads and buttons which told me doing that was at least not totally insane.
+Since there's no way to read the LED state of a given pad or button it seems the firmware has to maintain some representation of it. 
+The README from the SDK repo also stated that dynamic memory allocation wasn't a good idea.
+Great! I didn't want to deal with that anyway. c:
 
-```
-docker build -t novation-launchpad-pro-dev .
-docker run -it -v $(pwd):/launchpad-pro novation-launchpad-pro-dev
-make
-```
+Once I began writing some helper functions for handling the GOL rules, I realized that having Github copilot enabled felt like cheating.
+But that wasn't in the rules so I kept it. c:
+Go figure that an AI trained on the contents of millions of public repos could whip out a GOL implementation in any language. 
 
-## Using Vagrant
+With the logic down I repurposed the example code in the main event loop function to run the simulation every tick. 
+I decided to only include the 8x8 pad grid as the playing field to keep things neat.
+Since the pads and buttons are indexed in increasing sequential order starting from 0 in the bottom left I just had two `for` loops run over only the inner pads.
+Strangely, though there are no buttons in the corners, they still take up a number in the sequence.
+So the first button you can actually press is index 1 and the last is 98 despite 0 and 99 being valid indexes to address.
 
-To use [Vagrant](https://www.vagrantup.com/) to manage the build environment you need to:
+I was pretty sure the simulation was running at this point but, with no cells living to start, I couldn't be sure. 
+So in the initial setup function I just set some random cells to be alive at the start to see what happened. 
+Lo and behind, it worked! It wasn't terribly exciting as the pattern I'd chosen died immediately, but it worked!
 
-1. Clone this repository on your host computer (if using the command line, make sure you `git clone --recursive`).
-2. Install [Vagrant](https://www.vagrantup.com/)
-3. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
-4. Open a command prompt, and navigate to the project directory
-5. Type `vagrant up`, hit enter and grab a beverage of your choice.  Maybe two - it is building a lovely fresh development machine just for you!
+I spent some time messing around with the initial patterns to make sure it followed all the expected rules and it sure seemed to!
 
-If you have a poor internet connection, ummm, find a better one :)
+I then realized that if I just set a cell to be alive in the pad event handler, I could create an interactive GOL on the pads!
+The code for it was essentially one line to just toggle the pad state when it was pressed.
+With that in, I could now 'play' GOL like I never had before.
+It was mesmerizing to see the patterns evolve and be able to change them in real time.
 
-### Building
-Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.
+But this wasn't my end goal, as fun as it was, so it was on to bigger things!
 
-###  To use the command line interface:
-1. SSH into the Vagrant "box" by doing `vagrant ssh`
-2. At the command prompt, simply type `make`
+# The real work begins 🔨
+## Step 1: Scaffold out ideas
+I started the actual logic sim project by roughing out the struct I wanted to use to represent each pad button and pad.
+I came up with three types of cell:
+* Input: A cell that gets its value directly from another cell
+* Gate: A cell that computes its output based on a logic gate type
+* Empty: nothing c:
 
-### To build using Eclipse GUI
+I also, just to have, enumerated the gates I wanted to start with.
+* AND
+* OR
+* XOR
+* NOT
 
-**Make sure you wait until the `vagrant up` command has fully completed** before logging in to your VM.  The GUI appears long before the provisioning script finishes.  If you don't, you'll have to log out and log back in again before Eclipse can see the correct path.
+I then put together the actual struct to represent the cells.
+I wanted to just have one for all possible cell types, so not all the fields are always used. 
+This keeps the size of the array of all the structs constant and, since memory never seemed to be an issue, this worked out fine.
+The struct stores:
+* The cell type
+* The index of the cell it takes input from if it's an input cell
+* The gate type if it's a gate cell
+* The gates input indexes. These are always just the two cells behind the gate so this doesn't need to be stored exactly, but it is. 
+* The output value of the cell
 
-1. Log in to the Ubuntu GUI (the password is, as is the convention, **vagrant**).
-2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
-3. Accept the default when Eclipse asks you for a workspace.  I can't figure out how to store the workspace in source control, so you need to import it.
-4. Click "Workbench" at the Eclipse startup screen.
-5. In Eclipse, choose "File->Import..."
-6. Under "C/C++", choose "Existing Code as Makefile Project", hit "Next"
-7. Give the project any name you like (launchpad?)
-8. Under "Existing Code Location" type `/vagrant`.  The toolchain isn't important, the compiler is part of the Makefile.
-9. Hit Finish - you should now see your project.
-10. Select your project by clicking on it.
-11. Click the hammer icon at the top, and wait while the project builds.
-
-Either of the above methods will generate the firmware image, `launchpad_pro.syx`, in the project `build` directory.  You can then upload this to your Launchpad Pro from the host!
-
-## Using macOS
-
-On macOS you can easily install the GCC ARM toolchain using the [homebrew package manager](http://brew.sh). The EABI tools are maintained in an external repository which you need to put on tap first. You can then run ```make``` to directly compile the code:
-
-```
-brew tap PX4/homebrew-px4
-brew install gcc-arm-none-eabi
-make
-```
-
-# Uploading to a Launchpad Pro
-Now you've got some nice new code to run! To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on macOS, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you already have a tool in mind.
-
-I won't describe how to use these tools, I'm sure you already know - and if you don't, their documentation is superior to mine!  Here's what you need to do:
-
-1. Unplug your Launchpad Pro
-2. Hold the "Setup" button down while connecting it to your host via USB (ensure it's connected to the host, and not to a virtual machine!)
-3. The unit will start up in "bootloader" mode
-4. Send your launchpad_pro.syx file to the device MIDI port - it will briefly scroll "upgrading..." across the grid.
-5. Wait for the update to complete, and for the device to reboot!
-
-Tip - set the delay between sysex messages to as low a value as possible, so you're not waiting about for ages while the firmware uploads!
-
-# Bricked it!
-Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (`resources/Launchpad Pro-1.0.154.syx`) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
-
-# The API
-The API works in two directions - from the HAL (hardware abstraction layer) to the app, and from the app to the HAL.  The HAL calls into your app to:
-
-- Receive user events from the pads and buttons
-- Receive messages from the MIDI/USB ports
-- Receive a tick message to drive timer based code
-- Be notified when someone connects or disconnects a MIDI cable
-
-By calling into the HAL, your app can:
-
-- Write colours to the LEDs
-- Send messages to the MIDI/USB ports
-- Store and recall a little bit of data on the Launchpad Pro's flash memory
-
-The best way to learn about these is to read the documentation in `app.h`, and to study the (very basic) example code!
-
-# Debugging
-We decided not to support or encourage using a hardware debugger, as opening a Launchpad Pro to fit a debugging header can easily damage the FSR (force sensitive resistor) sheet.
-
-Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages (though hopefully no need for a 'scope!).  For what it's worth, that's the way I've developed this version of the firmware - dogfooding all the way ;)
-
-If do you want to debug interactively (and of course you do), you can use the interactive desktop simulator on macOS:
-
-1. Build the Xcode project located in `/tools/osx`
-2. Connect your Launchpad Pro
-3. Install the factory firmware on your Launchpad Pro
-4. Put the Launchpad Pro into "Programmer" mode using the Setup button (you'll get odd behaviour otherwise)
-5. Start debugging in Xcode!
-
-Currently it only supports button presses and LED messages - there's no setup button, flash storage or aftertouch (yet).  It has a really awful busywaiting timer for the 1kHz tick.  However, it does allow you to debug your application logic using Xcode!
-
-You can also use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump - more of a test harness.
-
-To debug the simulator interactively in Eclipse:
-
-1. Click the down arrow next to the little "bug" icon in the toolbar
-2. Choose "Debug configurations..."
-3. Right click "C/C++ Application" and choose "New...:
-4. Under "C/C++ Application" click Browse... and locate the simulator binary at `/vagrant/build/simulator`
-5. Hit "Debug"!
-
-# The Hardware
-The Launchpad Pro is based around an ARM Cortex M3 from STMicroelectronics.  Specifically, an [STM32F103RBT6](http://www.st.com/web/catalog/mmc/FM141/SC1169/SS1031/LN1565/PF164487).  It's clocked at 72MHz, and has 20k RAM (I'm not sure how much of this we're using in the open build yet - should be a fair amount left but I haven't measured it).  The low level LED multiplexing and pad/switch scanning consume a fair bit of CPU time in interrupt mode, but have changed a little in the open firmware library (so again, I don't have measurements for how many cycles they're using).
-
-It has 128k of flash memory, but we won't be exposing all of it as part of this API (dangerously easy to corrupt things!).
-
-# Vagrant tips
-When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
-
-If you only want to build using the command line, you might want to run your Vagrant box headless, which you can do by modifying the Vagrantfile: `vb.gui = false`.  You can also add more CPUs, RAM etc. if you want.
-
-If prefer, you can install the gcc-arm toolchain on your local machine, or you might already have it.  You can find all you need [here](http://gnuarmeclipse.livius.net/).
-
-If your connection drops out while updating the Vagrant box, you can get stuck, unable to `vagrant up`.  To resolve, you need to delete the temp file - `~/vagrant.d/tmp`.
-
-# Firmware development tips
-OK - we're not going to need to use the MISRA rules, but there are a few things to avoid.  Dynamic memory allocation is a no (well it will work, but it's best avoided). Floating point will work, but it's implemented in software and will be slooooow.   C++ ought to work, but you'll definitely want to avoid exceptions and RTTI!
+## Step 2: the clock ⏱
+I started off the actual implementation with the clock.
+The cell type is input but it has an input index of 0 and doesn't actually get computed with the rest of the pads. 

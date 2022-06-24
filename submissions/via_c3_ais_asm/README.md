@@ -53,7 +53,7 @@ void push(int x) {
 
 The assembler can be run with `cd ais_asm; cargo run`
 
-It will that list the generated instructions. Most instruction are ORI or ORIU, because these can be used together with the zero register to load any 32bit value into a register.
+It will list the generated instructions. Most instruction are ORI or ORIU, because these can be used together with the zero register to load any 32bit value into a register.
 
 ~~~
 Instruction { opcode: ORI, rs: Some(Index(0)), rt: Some(Index(16)), rd: None, imm: Some(0), constant: None, offset: None, function: None }
@@ -108,11 +108,11 @@ Instruction { opcode: XALUR, rs: Some(Index(16)), rt: Some(Index(18)), rd: Some(
 Instruction { opcode: XJ, rs: None, rt: Some(Index(19)), rd: None, imm: None, constant: None, offset: None, function: None }
 ~~~
 
-The assembler also outputs regular x86 disassembly of the payload. An this is where it gets interesting.
+The assembler also outputs regular x86 disassembly of the payload. And this is where it gets interesting.
 The first 3 instruction load EAX with the 0xB address, in a position independent manner.
 Then at position 0x9 there is a bad instruction. But when AIS is enabled this is a `JMPAI EAX` instruction. It will jump to the EAX, which we loaded with 0xB, and it will start executing the alternative instruction.
 All the `bound` instruction are not executed as x86 instruction but as alternative instruction, `AI`.
-These `bound` instructions are a wrapper, and the last 32bit contain the actual `AI`.
+These `bound` instructions are a wrapper, and the last 32bit contain the actual alternative instruction.
 Finally there is a `ret` instruction that will return from the payload back to the kernel.
 
 ~~~
@@ -241,6 +241,6 @@ Tried to get IO port writes to work so it is possible to send bytes from within 
 
 ### Day 8: TBD, but < 10.5h until deadline
 Payload is now loaded at known position and got jumps working. Next step is to finish DynAsm symbol support.
-DynAsm symbol support work. Only jump and some arithmetic instruction are supported by the assembler for now, how do I make an interesting demo with that?
+DynAsm symbol support works. Only jump and some arithmetic instruction are supported by the assembler for now, how do I make an interesting demo with that?
 Made a somewhat interesting demo that implements call and ret via a return register.
 Add stuff to readme.

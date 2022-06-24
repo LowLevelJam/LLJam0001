@@ -1,5 +1,5 @@
 
-use crate::ais::{AisError, Function, Instruction, Offset, Opcode, Register, SubOpXls};
+use crate::ais::{AisError, Instruction, Opcode, Register};
 
 #[derive(Debug)]
 pub enum DynAsmError {
@@ -61,8 +61,6 @@ impl Memory for Vec<u8> {
         let end = self.len();
         let bytes = self.get_mut(start..end).unwrap();
         let (mut instr, len) = Instruction::decode(bytes)?;
-
-        println!("{:X} {:?} {:X}", start, &sym_ref.kind, addr);
 
         // Fixup
         match sym_ref.kind {
@@ -154,7 +152,7 @@ impl DynAsm {
 
     pub fn new_sym_here(&mut self) -> Sym {
         let sym = self.new_sym();
-        self.sym_resolve(sym, self.addr());
+        self.sym_resolve(sym, self.addr()).unwrap();
         sym
     }
 
@@ -166,7 +164,6 @@ impl DynAsm {
     }
 
     pub fn set_sym_here(&mut self, sym: Sym) -> Result<(), DynAsmError> {
-        println!("addr = {:X}", self.addr());
         self.sym_resolve(sym, self.addr())
     }
 

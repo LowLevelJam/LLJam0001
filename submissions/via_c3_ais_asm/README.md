@@ -17,6 +17,16 @@ One month ago I had breakthrough in this mystery. I found some leaked confidenti
 
 Armed with this new information an old desire resurfaced, writing an assembler for the VIA C3 Alternative Instruction Set. And get some code running on this alternative instruction set!
 
+
+## Demo
+
+
+
+## Improvements
+Currently the assemble only support for small number of instruction, but a lot more are documented. So these can be added.
+I did add support for XIOR and XIOW, with the idea to use them to write to the serial port but I never got them working on real hardware, this need some debugging.
+The AIS doens't have documented support for conditional jumps but I expect that these still implemented, so maybe they can be found by fuzzing the hardware.
+
 ## Extra info
 Xoreaxeaxeax notes on AIS can by found in the [rosenbridge](https://github.com/xoreaxeaxeax/rosenbridge) repo.
 
@@ -51,4 +61,5 @@ Worked on DynAsm symbol support, but could not really find a good use for it yet
 Tried to get IO port writes to work so it is possible to send bytes from within AIS code. Couldn't get that to work. Still some time left tomorrow, but will need to finish the assembler, write some demo with stuff that does work. And looking into how submit the project.
 
 ### Day 8: TBD, but < 10.5h until deadline
-Loaded PAYLOAD at known position and got jumps working. Next step is to finish DynAsm symbol support.
+Payload is now loaded at known position and got jumps working. Next step is to finish DynAsm symbol support.
+DynAsm symbol support work. Only jump and some arithmetic instruction are supported by the assembler for now, how do I make an interesting demo with that?

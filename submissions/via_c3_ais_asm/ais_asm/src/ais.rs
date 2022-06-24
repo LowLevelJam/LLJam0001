@@ -1,5 +1,5 @@
-use num::{FromPrimitive, ToPrimitive};
-use num_derive::{FromPrimitive, ToPrimitive};
+use num::{FromPrimitive};
+use num_derive::{FromPrimitive};
 
 #[derive(Debug)]
 pub enum AisError {
@@ -158,7 +158,7 @@ pub enum Opcode {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Copy, Clone, FromPrimitive, ToPrimitive)]
+#[derive(Debug, Copy, Clone, FromPrimitive)]
 pub enum SubOpXalu {
     SHL = 0o00,
     SHR = 0o02,
@@ -348,7 +348,7 @@ impl Instruction {
             .constant
             .ok_or_else(|| AisError::MissingConstant(self.clone()))?;
 
-        Ok(0 /*c as u32*/)
+        Ok(0 /*c as u32*/) // FIXME
     }
 
     fn encode_offset(&self) -> Result<u32, AisError> {

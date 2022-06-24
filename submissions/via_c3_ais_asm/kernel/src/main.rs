@@ -12,10 +12,12 @@ mod uart;
 
 use core::arch::asm;
 
+use crate::print::SERIAL1;
+
 const PAYLOAD_LEN: usize = core::include_bytes!("../../ais_asm/out.bin").len();
 
 #[link_section = ".payload"]
-static PAYLOAD: &[u8; PAYLOAD_LEN] = core::include_bytes!("../../ais_asm/out.bin");
+static PAYLOAD: [u8; PAYLOAD_LEN] = *core::include_bytes!("../../ais_asm/out.bin");
 
 pub fn multiboot_entry(_: &[u8]) {
     println!("Hello world!");
@@ -37,6 +39,11 @@ pub fn multiboot_entry(_: &[u8]) {
     // );
 
     println!("r = {:8X}", PAYLOAD.as_ptr() as u32);
+
+
+    while !SERIAL1.lock().tx_empty() {
+        core::hint::spin_loop()
+    }
 
     let payload: extern "C" fn() -> u32 = unsafe { core::mem::transmute(PAYLOAD.as_ptr()) };
     let r = payload();

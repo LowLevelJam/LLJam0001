@@ -56,7 +56,7 @@ impl Uart {
         self.write(LCR, LCR_8BITS);
     }
 
-    fn tx_empty(&self) -> bool {
+    pub fn tx_empty(&self) -> bool {
         self.read(LSR) & LSR_EMPTY == LSR_EMPTY
     }
 

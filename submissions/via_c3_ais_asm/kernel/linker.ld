@@ -1,6 +1,7 @@
 /* Minimal linker script */
 
 SECTIONS {
+
     . = 0x400000;
 
     .rodata.keep : {
@@ -39,5 +40,10 @@ SECTIONS {
 
     .bss : {
         *(.bss .bss.*)
+    }
+
+    . = 0x480000;
+    .payload :  {
+        KEEP( *(.payload) )
     }
 }

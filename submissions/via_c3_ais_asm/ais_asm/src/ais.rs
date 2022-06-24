@@ -1,4 +1,5 @@
-use std::collections::VecDeque;
+use num::{FromPrimitive, ToPrimitive};
+use num_derive::{FromPrimitive, ToPrimitive};
 
 #[derive(Debug)]
 pub enum AisError {
@@ -12,9 +13,11 @@ pub enum AisError {
     MissingRt(Instruction),
     MissingRd(Instruction),
     MissingConstant(Instruction),
-    MissingSubOp(Instruction),
+    MissingOffset(Instruction),
+    MissingFunction(Instruction),
 
     DecodeError(Vec<u8>),
+    DecodeIssue,
 
     UnknownOpcode(u32),
     UnknownSubOp(u32),
@@ -32,7 +35,7 @@ impl Register {
             Register::Index(x) if *x > 31 => Err(AisError::InvalidRegisterIndex(*x)),
             Register::Index(x) => Ok((*x).into()),
             Register::Name(x) => match x.as_str() {
-                "R4"  => Ok(4),
+                "R4" => Ok(4),
                 "EAX" => Ok(16),
                 "ECX" => Ok(17),
                 "EDX" => Ok(18),
@@ -61,76 +64,127 @@ pub enum Const {
     // There are some other special case, skip for now
 }
 
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Opcode {
-    XJ,
+#[derive(Debug, Copy, Clone)]
+pub enum Offset {
+    Number(i8),
+    // There are some other special case, skip for now
+}
 
-    // I type
-    ORIU,
-    ADDI,
-    ANDIU,
-    ANDIL,
-    ANDI,
-    ORI,
-    XORI,
-    XORIU,
+#[derive(Debug, Copy, Clone, FromPrimitive)]
+pub enum Size {
+    Bits16 = 0b000,
+    Bits32 = 0b010,
+    Bits8 = 0b001,
+}
 
-    // XALU type
-    XALU,
-    XALUI,
-    XALUR,
-    XALUIR,
+#[derive(Debug, Copy, Clone, FromPrimitive)]
+pub enum Sel {
+    Flat = 0b1010,
+}
 
-    XMISC,
-    XLEAI,
-    XLEAD,
-    XL,
-    XL2,
-    XL3,
-    XLBI,
-    XLDESC,
-    XIOR,
-    XPOPBR,
-    XPOP,
-    XS,
-    XS2,
-    XPUSHI,
-    XSI,
-    XPUSHIP,
-    XIOW,
-    XSU,
-    XPUSH,
+#[derive(Debug, Copy, Clone)]
+pub enum SubOpXls {
+    Xio(SubOpXio),
+}
+
+#[derive(Debug, Copy, Clone, FromPrimitive)]
+pub enum SubOpXio {
+    Norm = 0,
+}
+
+#[derive(Debug, Copy, Clone, FromPrimitive)]
+pub enum AddrSize {
+    Bits32 = 0b11,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Function {
+    Xls(SubOpXls, AddrSize, Size, Sel),
+    Xalu(SubOpXalu, DpCntl),
+}
+
+#[derive(Debug, Copy, Clone, FromPrimitive)]
+pub enum DpCntl {
+    Word = 0b000,
+    Short = 0b001,
+    LL = 0b010,
+    HL = 0b011,
+    LH = 0b100,
+    HH = 0b101,
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Copy, Clone)]
-pub enum SubOp {
-    SHL,
-    SHR,
-    SAR,
-    ROL,
-    ROR,
-    RCL,
-    RCR,
-    INC,
-    CMPS,
-    DEC,
-    IMUL,
-    MUL,
-    IDIV,
-    ADD,
-    ADC,
-    SUB,
-    SBB,
-    AND,
-    OR,
-    XOR,
-    NOR,
-    CTC2,
-    SETCC,
-    MFLOU,
-    MFLOI,
+#[derive(Debug, Copy, Clone, PartialEq, FromPrimitive)]
+pub enum Opcode {
+    XJ = 0o06,
+
+    // I type
+    ORIU = 0o10,
+    ADDI = 0o11,
+    ANDIU = 0o12,
+    ANDIL = 0o13,
+    ANDI = 0o14,
+    ORI = 0o15,
+    XORI = 0o16,
+    XORIU = 0o17,
+
+    // XALU type
+    XALU = 0o40,
+    XALUI = 0o41,
+    XALUR = 0o42,
+    XALUIR = 0o43,
+
+    XMISC = 0o50,
+    XLEAI = 0o53,
+    XLEAD = 0o54,
+
+    XL = 0o60,
+    XL2 = 0o61,
+    XL3 = 0o62,
+    XLBI = 0o63,
+    XLDESC = 0o64,
+    XIOR = 0o65,
+    XPOPBR = 0o66,
+    XPOP = 0o67,
+
+    XS = 0o70,
+    XS2 = 0o71,
+    XPUSHI = 0o72,
+    XSI = 0o73,
+    XPUSHIP = 0o74,
+    XIOW = 0o75,
+    XSU = 0o76,
+    XPUSH = 0o77,
+}
+
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Debug, Copy, Clone, FromPrimitive, ToPrimitive)]
+pub enum SubOpXalu {
+    SHL = 0o00,
+    SHR = 0o02,
+    SAR = 0o03,
+    ROL = 0o04,
+    ROR = 0o05,
+    RCL = 0o06,
+    RCR = 0o07,
+    INC = 0o10,
+    CMPS = 0o11,
+    DEC = 0o12,
+    IMUL = 0o14,
+    MUL = 0o15,
+    IDIV = 0o16,
+    ADD = 0o20,
+    ADC = 0o21,
+    SUB = 0o22,
+    SBB = 0o23,
+    AND = 0o24,
+    OR = 0o25,
+    XOR = 0o26,
+    NOR = 0o27,
+    CTC2 = 0o31,
+    SETCC = 0o35,
+    MFLOU = 0o36,
+    MFLOI = 0o37,
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +195,8 @@ pub struct Instruction {
     pub rd: Option<Register>,
     pub imm: Option<u16>,
     pub constant: Option<Const>,
-    pub subop: Option<SubOp>,
+    pub offset: Option<Offset>,
+    pub function: Option<Function>,
 }
 
 impl Instruction {
@@ -153,15 +208,12 @@ impl Instruction {
             rd: None,
             imm: None,
             constant: None,
-            subop: None,
+            offset: None,
+            function: None,
         }
     }
 
-    pub fn j(base: Register) -> Self {
-        let mut ret = Self::new(Opcode::XJ);
-        ret.rt = Some(base);
-        ret
-    }
+
 
     pub fn i_type(opcode: Opcode, dst: Register, src: Register, imm: u16) -> Self {
         let mut ret = Self::new(opcode);
@@ -171,21 +223,69 @@ impl Instruction {
         ret
     }
 
-    pub fn xalu_type(subop: SubOp, dst: Register, src: Register, extra: Register) -> Self {
+    pub fn xalur(
+        subop: SubOpXalu,
+        dpcntl: DpCntl,
+        dst: Register,
+        src: Register,
+        extra: Register,
+    ) -> Self {
         let mut ret = Self::new(Opcode::XALUR);
         ret.rs = Some(src);
         ret.rd = Some(dst);
         ret.rt = Some(extra);
-        ret.subop = Some(subop);
+        ret.function = Some(Function::Xalu(subop, dpcntl));
         ret
     }
 
-    pub fn xalui_type(subop: SubOp, dst: Register, src: Register, constant: Const) -> Self {
+    pub fn xaluir(
+        subop: SubOpXalu,
+        dpcntl: DpCntl,
+        dst: Register,
+        src: Register,
+        constant: Const,
+    ) -> Self {
         let mut ret = Self::new(Opcode::XALUIR);
         ret.rs = Some(src);
         ret.rd = Some(dst);
         ret.constant = Some(constant);
-        ret.subop = Some(subop);
+        ret.function = Some(Function::Xalu(subop, dpcntl));
+        ret
+    }
+
+    pub fn xiow(size: Size, port: Register, value: Register) -> Self {
+        let mut instr = Instruction::xls_type(Opcode::XIOW, value, port, Offset::Number(0));
+        instr.function = Some(Function::Xls(
+            SubOpXls::Xio(SubOpXio::Norm),
+            AddrSize::Bits32,
+            size,
+            Sel::Flat,
+        ));
+        instr
+    }
+
+    pub fn xior(size: Size, port: Register, value: Register) -> Self {
+        let mut instr = Instruction::xls_type(Opcode::XIOR, value, port, Offset::Number(0));
+        instr.function = Some(Function::Xls(
+            SubOpXls::Xio(SubOpXio::Norm),
+            AddrSize::Bits32,
+            size,
+            Sel::Flat,
+        ));
+        instr
+    }
+
+    pub fn xj(base: Register) -> Self {
+        let mut ret = Self::new(Opcode::XJ);
+        ret.rt = Some(base);
+        ret
+    }
+
+    pub fn xls_type(opcode: Opcode, rs: Register, base: Register, offset: Offset) -> Self {
+        let mut ret = Self::new(opcode);
+        ret.rs = Some(rs);
+        ret.rt = Some(base);
+        ret.offset = Some(offset);
         ret
     }
 
@@ -212,26 +312,7 @@ impl Instruction {
     }
 
     fn encode_opcode(&self) -> Result<u32, AisError> {
-        let bits: u32 = match self.opcode {
-            Opcode::XJ => 0o6,
-
-            Opcode::ORIU => 0o10,
-            Opcode::ADDI => 0o11,
-            Opcode::ANDIU => 0o12,
-            Opcode::ANDIL => 0o13,
-            Opcode::ANDI => 0o14,
-            Opcode::ORI => 0o15,
-            Opcode::XORI => 0o16,
-            Opcode::XORIU => 0o17,
-
-            Opcode::XALU => 0o40,
-            Opcode::XALUI => 0o41,
-            Opcode::XALUR => 0o42,
-            Opcode::XALUIR => 0o43,
-            _ => return Err(AisError::Unsupported(self.clone())),
-        };
-
-        Ok(bits << 26)
+        Ok((self.opcode as u32) << 26)
     }
 
     fn encode_rs(&self) -> Result<u32, AisError> {
@@ -264,84 +345,96 @@ impl Instruction {
             .map(|x| x.into())
     }
 
-    fn const_bits(&self) -> Result<u32, AisError> {
+    fn encode_const(&self) -> Result<u32, AisError> {
         let c = self
             .constant
             .ok_or_else(|| AisError::MissingConstant(self.clone()))?;
 
-        todo!();
-
-        Ok(0)
+        Ok(0 /*c as u32*/)
     }
 
-    fn encode_subop(&self) -> Result<u32, AisError> {
-        let subop = self
-            .subop
-            .ok_or_else(|| AisError::MissingSubOp(self.clone()))?;
+    fn encode_offset(&self) -> Result<u32, AisError> {
+        let offset = self
+            .offset
+            .ok_or_else(|| AisError::MissingOffset(self.clone()))?;
+
+        let offset_bits = match offset {
+            Offset::Number(0) => 0,
+            _ => return Err(AisError::Unsupported(self.clone())),
+        };
+
+        Ok(offset_bits)
+    }
+
+    fn encode_sub_op_xls(&self, subop: SubOpXls) -> Result<u32, AisError> {
         let bits = match subop {
-            SubOp::SHL => 0,
-            SubOp::SHR => 2,
-            SubOp::SAR => 3,
-            SubOp::ROL => 4,
-            SubOp::ROR => 5,
-            SubOp::RCL => 6,
-            SubOp::RCR => 7,
-            SubOp::INC => 8,
-            SubOp::CMPS => 9,
-            SubOp::DEC => 10,
-            SubOp::IMUL => 12,
-            SubOp::MUL => 13,
-            SubOp::IDIV => 14,
-            SubOp::ADD => 16,
-            SubOp::ADC => 17,
-            SubOp::SUB => 18,
-            SubOp::SBB => 19,
-            SubOp::AND => 20,
-            SubOp::OR => 21,
-            SubOp::XOR => 22,
-            SubOp::NOR => 23,
-            SubOp::CTC2 => 25,
-            SubOp::SETCC => 29,
-            SubOp::MFLOU => 30,
-            SubOp::MFLOI => 31,
+            SubOpXls::Xio(x) => x as u32,
+        };
+
+        Ok(bits << 9)
+    }
+
+    fn encode_function(&self) -> Result<u32, AisError> {
+        let function = self
+            .function
+            .ok_or_else(|| AisError::MissingFunction(self.clone()))?;
+
+        let bits = match function {
+            Function::Xalu(sub_op, dp_cntl) => (sub_op as u32) | (dp_cntl as u32) << 5,
+            Function::Xls(sub_op, addr_size, size, sel) => {
+                let subop_bits = self.encode_sub_op_xls(sub_op)?;
+                subop_bits
+                    | (addr_size as u32 & 2) << 7
+                    | ((size as u32) & 0x6) << 5
+                    | (sel as u32) << 2
+                    | (size as u32 & 1) << 1
+                    | addr_size as u32 & 1
+            }
         };
 
         Ok(bits)
     }
 
     pub fn encode(&self) -> Result<Vec<u8>, AisError> {
-        let instr =
-            if self.is_i_type() {
-                let op = self.encode_opcode()?;
-                let rs = self.encode_rs()?;
-                let rt = self.encode_rt()?;
-                let imm = self.encode_imm()?;
+        let instr = if self.is_i_type() {
+            let op = self.encode_opcode()?;
+            let rs = self.encode_rs()?;
+            let rt = self.encode_rt()?;
+            let imm = self.encode_imm()?;
 
-                op | rs | rt | imm
-            } else if self.is_xalu_type() {
-                let op = self.encode_opcode()?;
-                let rs = self.encode_rs()?;
-                let rt = self.encode_rt()?;
-                let rd = self.encode_rd()?;
-                let subop = self.encode_subop()?;
+            op | rs | rt | imm
+        } else if self.is_xalu_type() {
+            let op = self.encode_opcode()?;
+            let rs = self.encode_rs()?;
+            let rt = self.encode_rt()?;
+            let rd = self.encode_rd()?;
+            let function = self.encode_function()?;
 
-                op | rs | rt | rd | subop
-            } else if self.is_xalui_type() {
-                let op = self.encode_opcode()?;
-                let rs = self.encode_rs()?;
-                let c = self.const_bits()?;
-                let rd = self.encode_rd()?;
-                let subop = self.encode_subop()?;
+            op | rs | rt | rd | function
+        } else if self.is_xalui_type() {
+            let op = self.encode_opcode()?;
+            let rs = self.encode_rs()?;
+            let c = self.encode_const()?;
+            let rd = self.encode_rd()?;
+            let function = self.encode_function()?;
 
-                op | rs | c | rd | subop
-            } else if self.opcode == Opcode::XJ {
-                let op = self.encode_opcode()?;
-                let rt = self.encode_rt()?;
+            op | rs | c | rd | function
+        } else if self.opcode == Opcode::XJ {
+            let op = self.encode_opcode()?;
+            let rt = self.encode_rt()?;
 
-                op | rt | 0b01_0001_11
-            } else {
-                return Err(AisError::Unsupported(self.clone()));
-            };
+            op | rt | 0b01_0001_00
+        } else if matches!(self.opcode, Opcode::XIOR | Opcode::XIOW) {
+            let op = self.encode_opcode()?;
+            let rs = self.encode_rs()?;
+            let base = self.encode_rt()?;
+            let offset = self.encode_offset()?;
+            let function = self.encode_function()?;
+
+            op | rs | base | offset | function
+        } else {
+            return Err(AisError::Unsupported(self.clone()));
+        };
 
         let mut data = Vec::new();
         data.extend_from_slice(&[0x62, 0x80]);
@@ -350,7 +443,6 @@ impl Instruction {
     }
 
     pub fn decode(bytes: &[u8]) -> Result<(Instruction, usize), AisError> {
-
         if bytes.len() < 6 {
             return Err(AisError::DecodeError(bytes.into()));
         }
@@ -375,16 +467,22 @@ impl Instruction {
             instr.rt = Some(Register::Index(rt_bits));
             instr.imm = Some(imm_bits);
         } else if instr.is_xalu_type() {
-            instr.subop = Some(decode_subop(word)?);
+            instr.function = Some(decode_xalu_function(word)?);
             instr.rs = Some(Register::Index(rs_bits));
             instr.rt = Some(Register::Index(rt_bits));
             instr.rd = Some(Register::Index(rd_bits));
         } else if instr.is_xalui_type() {
-            instr.subop = Some(decode_subop(word)?);
+            instr.function = Some(decode_xalu_function(word)?);
             instr.rs = Some(Register::Index(rs_bits));
             instr.rd = Some(Register::Index(rd_bits));
         } else if instr.opcode == Opcode::XJ {
             instr.rt = Some(Register::Index(rt_bits));
+        } else if matches!(instr.opcode, Opcode::XIOR | Opcode::XIOW) {
+            instr.rs = Some(Register::Index(rs_bits));
+            instr.rt = Some(Register::Index(rt_bits));
+            instr.offset = Some(Offset::Number(0)); //FIXME
+            //instr.function = Some()
+
         } else {
             return Err(AisError::DecodeError(bytes.into()));
         }
@@ -393,84 +491,15 @@ impl Instruction {
     }
 }
 
-fn decode_subop(word: u32) -> Result<SubOp, AisError> {
-    let subop_bits = word & 0x1F;
-    let subop = match subop_bits {
-        0 => SubOp::SHL,
-        2 => SubOp::SHR,
-        3 => SubOp::SAR,
-        4 => SubOp::ROL,
-        5 => SubOp::ROR,
-        6 => SubOp::RCL,
-        7 => SubOp::RCR,
-        8 => SubOp::INC,
-        9 => SubOp::CMPS,
-        10 => SubOp::DEC,
-        12 => SubOp::IMUL,
-        13 => SubOp::MUL,
-        14 => SubOp::IDIV,
-        16 => SubOp::ADD,
-        17 => SubOp::ADC,
-        18 => SubOp::SUB,
-        19 => SubOp::SBB,
-        20 => SubOp::AND,
-        21 => SubOp::OR,
-        22 => SubOp::XOR,
-        23 => SubOp::NOR,
-        25 => SubOp::CTC2,
-        29 => SubOp::SETCC,
-        30 => SubOp::MFLOU,
-        31 => SubOp::MFLOI,
-        _ => return Err(AisError::UnknownSubOp(subop_bits)),
-    };
-
-    Ok(subop)
+fn decode_xalu_function(word: u32) -> Result<Function, AisError> {
+    let sub_op_bits = word & 0x1F;
+    let dp_cntl_bits = (word >> 5) & 0x3;
+    let sub_op = FromPrimitive::from_u32(sub_op_bits).ok_or(AisError::DecodeIssue)?;
+    let dp_cntl = FromPrimitive::from_u32(dp_cntl_bits).ok_or(AisError::DecodeIssue)?;
+    Ok(Function::Xalu(sub_op, dp_cntl))
 }
 
 fn decode_opcode(word: u32) -> Result<Opcode, AisError> {
     let opcode_bits = (word >> 26) & 0x3F;
-
-    let opcode = match opcode_bits {
-        0o06 => Opcode::XJ,
-
-        0o10 => Opcode::ORIU,
-        0o11 => Opcode::ADDI,
-        0o12 => Opcode::ANDIU,
-        0o13 => Opcode::ANDIL,
-        0o14 => Opcode::ANDI,
-        0o15 => Opcode::ORI,
-        0o16 => Opcode::XORI,
-        0o17 => Opcode::XORIU,
-
-        0o40 => Opcode::XALU,
-        0o41 => Opcode::XALUI,
-        0o42 => Opcode::XALUR,
-        0o43 => Opcode::XALUIR,
-
-        0o50 => Opcode::XMISC,
-        0o53 => Opcode::XLEAI,
-        0o54 => Opcode::XLEAD,
-
-        0o60 => Opcode::XL,
-        0o61 => Opcode::XL2,
-        0o62 => Opcode::XL3,
-        0o63 => Opcode::XLBI,
-        0o64 => Opcode::XLDESC,
-        0o65 => Opcode::XIOR,
-        0o66 => Opcode::XPOPBR,
-        0o67 => Opcode::XPOP,
-
-        0o70 => Opcode::XS,
-        0o71 => Opcode::XS2,
-        0o72 => Opcode::XPUSHI,
-        0o73 => Opcode::XSI,
-        0o74 => Opcode::XPUSHIP,
-        0o75 => Opcode::XIOW,
-        0o76 => Opcode::XSU,
-        0o77 => Opcode::XPUSH,
-
-        _ => return Err(AisError::UnknownOpcode(opcode_bits)),
-    };
-
-    Ok(opcode)
+    FromPrimitive::from_u32(opcode_bits).ok_or(AisError::UnknownOpcode(opcode_bits))
 }

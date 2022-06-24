@@ -47,4 +47,8 @@ Next step will be to add more support to the assembler and write a nice demo.
 ### Day 6: 4h
 Worked on DynAsm symbol support, but could not really find a good use for it yet. AIS doesn't have conditional jumps, at least not according the leaked documents. And the unconditional jump is absolute, but I want/need my payload codegen to be position independent. And getting instruction pointer with AIS is done via XPUSHIP so I will need to look into that. There also no native call instruction, I think you need to perform a XPUSHIP and jump (XJ).
 
-### Day 7:
+### Day 7: 5h
+Tried to get IO port writes to work so it is possible to send bytes from within AIS code. Couldn't get that to work. Still some time left tomorrow, but will need to finish the assembler, write some demo with stuff that does work. And looking into how submit the project.
+
+### Day 8: TBD, but < 10.5h until deadline
+Loaded PAYLOAD at known possition and got jumps working. Next step is to finish DynAsm symbol support.

@@ -111,6 +111,13 @@ It was mesmerizing to see the patterns evolve and be able to change them in real
 
 But this wasn't my end goal, as fun as it was, so it was on to bigger things!
 
+
+
+https://user-images.githubusercontent.com/5872055/175462695-0c0dd489-feb3-4fbd-8c91-83c4529b736e.mp4
+
+
+
+
 # The real work begins 🔨
 ## Step 1: Scaffold out ideas
 I started the actual logic sim project by roughing out the struct I wanted to use to represent each pad button and pad.
@@ -203,6 +210,8 @@ It worked flawlessly!
 I now had working and, or, xor, and not gates! 
 Though I could only test them with the clock input.
 
+https://user-images.githubusercontent.com/5872055/175462968-7555f6c2-6091-4727-b182-5eab1be4121a.mp4
+
 ## Step 7: Route row outputs 🔀
 This was a quick step. 
 It just involved allowing the buttons at the end of rows to also be routed the same as the clock.
@@ -222,12 +231,24 @@ With user input solved, I could finally make my first interesting circuit, a ful
 Because of the interconnected nature of it, each gate had to be on its own row, but it did work! 
 It's really fun to watch the pretty lights flash and update in real time. 
 
+
+
+https://user-images.githubusercontent.com/5872055/175463192-3cb4439b-4292-4259-833c-22d3ea90c6eb.mp4
+
+
+
 ## Aside: Just playing around 🕹
 At this point I had enough built to start messing around and having fun with the simulator.
 After the full adder I tried a few more async logic circuits and they all worked great! 
 I tried building some latches; SR worked great as did a D flip flop. 
 It was here I also learned that using the bottom row of buttons for input wasn't the best idea.
 As I said earlier, holding them down for more than a second is not comfortable at all. 😅
+
+
+https://user-images.githubusercontent.com/5872055/175463268-44a70756-3e75-448e-ae6d-760cb4e5dd63.mp4
+
+
+
 
 I wanted to then try building a binary counter. 
 The design I found used a JK flip flop but, because it's built of all NAND gates, I couldn't fit it neatly into the grid since I had to build it with an AND and an inverter.

@@ -1,3 +1,7 @@
+# Launchpad Logic
+## Team
+* Max Starr
+
 # The main idea 💡
 Since the theme of the project is 'small but mighty' I looked for what I had lying around which qualified. 
 I knew from past experience that an open source SDK had been made available for making custom firmware for the Novation Launchpad Pro and it's and area I'd been wanting to dip back into.
@@ -133,4 +137,163 @@ The struct stores:
 
 ## Step 2: the clock ⏱
 I started off the actual implementation with the clock.
-The cell type is input but it has an input index of 0 and doesn't actually get computed with the rest of the pads. 
+The cell type is empty but has its output set explicitly in the code.
+In the main app loop function, it has a variable which counts up to a set number of cycles. 
+Once that happens, the clock state is flipped and the simulation is run. 
+
+While I was writing out the update code, Copilot stepped in and filled in the implementations for all the gates.
+I just ran with it since I didn't have any deep desire to write that code myself, but it was *wild* to see it spring that out of nowhere.
+
+When I managed to get the firmware uploaded I saw what would usually be the 'record arm' button blinking! Progress!
+
+## Step 3: Basic routing 🔀
+My idea for how to handle routing signals was pretty simple: Hold down a signal provider button then press the pad where you want the signal to go.
+It is, however, not perfect. 
+For example, this is difficult to do if you only have one hand, not impossible as the device isn't that wide across, but difficult.
+Also the buttons are stiff and tiring to hold for more than a couple seconds.
+This becomes more of a problem later. 
+However, the strategy works and is simple to implement. 
+
+I store an index for whatever button is currently being held.
+When the button is pressed, the index is set, when it's released, the index is reset to 0. Dead simple. 
+This doesn't support holding multiple buttons, in fact doing so can lead to unexpected behavior, but that's not explicitly part of the UI so a user would *never* do that! c:
+
+When a pad is pressed, it checks if there is a non-zero index in the held button variable.
+If so, it checks the type of the cell at that index and sets itself accordingly.
+For now, just to an input with the source index as the clock.
+
+With that set, I could now get any pad to blink in time with the clock! Sweet! 
+
+## Step 4: Row values 🔢
+One of my initial requirements was that each row output the final value to the button which caps it. 
+By final value I mean the value of the non-empty pad furthest to the right in that row. 
+
+This required refactoring the main application function to use nested for loops instead of one single loop. 
+Nesting them made it easier to keep track of when a row was done processing.
+It was simple enough then to just directly set the value of the row-ending buttons similar to how the clock was set. 
+
+I tested by linking up some pads to the clock and it all seemed to work out!
+
+## Step 5: Clear cells ❌
+If I can 'place' clock signals, I want to be able to remove them as well. 
+Here I just check if the input index of a given cell equals the button that's currently held down.
+If it does, the cell is set to empty and its value is cleared. 
+
+This decision will haunt me the rest of this project.
+
+## Step 6: Gates! 🚪 (I couldn't find a gate emoji. Sue me.)
+This was the first real test of the logic as I saw it.
+I started by deciding which gate will be assigned to which button. 
+Fortunately, the top left of the launchpad features buttons which are normally used for navigation.
+So with up, down, left, and right arrows, the placement was basically decided. 
+In some mathematical notation systems, and is written as ∧ and or as ∨ so those were settled. 
+Circuit diagrams draw an inverter as essentially a > with a bubble so putting it on the right arrow made sense. 
+That just left < for xor, which makes as much sense as anything else. 
+
+In the setup function I manually assign distinct colors to each of the buttons.
+The LEDs will hold their assigned color until explicitly changed, so this operation only has to be done once. 
+
+I then implemented essentially the same code as with the clock for setting pads to certain gates.
+Here the code got more than a little messy.
+It just runs a switch statement through all the possible gate button indexes and then manually sets all the pad values accordingly, including the color.
+It's criminally verbose but it gets the job done and runs fast enough that I don't care to fix it.
+
+With the cell configured, the code that Copilot wrote in step 2 was put to the test.
+It worked flawlessly! 
+I now had working and, or, xor, and not gates! 
+Though I could only test them with the clock input.
+
+## Step 7: Route row outputs 🔀
+This was a quick step. 
+It just involved allowing the buttons at the end of rows to also be routed the same as the clock.
+It uses exactly the same code.
+Works fine!
+
+## Step 8: Realtime user input 👆
+I decided to make each of the buttons on the bottom row a rotatable user input button.
+Whenever they are pressed, whatever pads they are routed to will be set to 1, and 0 when they're released.
+
+Initially the routing was simple enough, just the same as the row end buttons. 
+However, I soon discovered that only running the simulation every half second made inputs feel terrible. 
+It took, at most, 499 ms to update the tile. That's a lot of input lag!
+This was quickly solved by moving the simulation code to where it is run every millisecond rather than in sync with the clock.
+
+With user input solved, I could finally make my first interesting circuit, a full adder! 
+Because of the interconnected nature of it, each gate had to be on its own row, but it did work! 
+It's really fun to watch the pretty lights flash and update in real time. 
+
+## Aside: Just playing around 🕹
+At this point I had enough built to start messing around and having fun with the simulator.
+After the full adder I tried a few more async logic circuits and they all worked great! 
+I tried building some latches; SR worked great as did a D flip flop. 
+It was here I also learned that using the bottom row of buttons for input wasn't the best idea.
+As I said earlier, holding them down for more than a second is not comfortable at all. 😅
+
+I wanted to then try building a binary counter. 
+The design I found used a JK flip flop but, because it's built of all NAND gates, I couldn't fit it neatly into the grid since I had to build it with an AND and an inverter.
+So...
+
+## Step 9: NAND and NOR!
+This was also pretty simple.
+I chose colors to represent the new gates, put the buttons right next to the existing gates, and duplicated the existing gate code for them.
+Dead simple, worked as well as the rest.
+
+## Step 10: Pain 😭
+Here is where I started to break down.
+Async logic seemed to work *great* but I started having issues with synchronous logic.
+My ultimate goal was to build a binary counter but no matter what I tried, every stage after the first always just showed the same value.
+I tried a design using JK flip flops, D flop flops, none of it seemed to work properly. 
+The flip flops worked *fine* in isolation, but something about combining them caused issues. 
+
+I went down an *entire* rabbit hole trying to solve this. 
+I took a tip from a friend in the LLJS Discord and tried a design where all the updates for a simulation 'tick' write into a temporary state.
+That state is then copied to the 'working' state after all the gates are updated. 
+While I'm sure this approach is better, it didn't seem to fix anything. 
+
+I moved the simulation function call back in with the clock tick to try and slow things down and saw something interesting.
+I had noticed before that when the latch was in a state, it there was something odd about the lights.
+Slowing it down revealed the issue, the latch isn't actually maintaining a steady state, there is a certain amount of oscillation going on.
+The feedback loop causes the gates to be constantly changing states every few cycles. 
+I'm *pretty* sure this is why it isn't working as intended. 
+However, I haven't dug deeply enough into *why* this is happening to get it working. 
+
+A good half of my time on this project was spent trying to debug this issue and as of now, it's still not fixed. 
+So, async logic works great, some synchronous logic, on the surface, works fine, but there are still some deeper bugs in the system.
+
+
+## Future improvements
+There is a *ton* of room to make the code itself more modular.
+Storing the button colors instead of the gate input values for one would clean up a *lot* of logic. 
+
+Feature wise, I never actually implemented a dedicated delete button. 
+If I wanted to clear a cell, I either had to hold the same button that was used to set it or, as I more commonly did, hold one button to set all the cells then immediately unset them.
+This is what I meant when I wrote that the decision on how to clear the cells would haunt me. 
+
+Perhaps more importantly, there is still a lot of ambiguity in the UI.
+If a cell is routed from an input and the input is off, there is no way to visually distinguish it from an empty cell. 
+Similarly, if the input is on, there's no way to tell *which* input it is receiving. 
+I haven't thought enough about these issues to propose solutions but I'm sure they could be found. 
+
+# Conclusion
+Overall this was a *wildly* fun project.
+I had way more fun writing C than I ever thought I would after college.
+(It turns out making LEDs blink is very satisfying)
+
+I learned a lot about the basics of digital logic circuit simulator design.
+Turns out the basics aren't as daunting as I thought!
+But I also learned that, as always, the devil is in the (implementation) details.
+
+I also learned I hate working on this platform just because the upload process is so damn painful. 
+Fun times! 😁
+
+I'd like to sincerely thank Nate Catelli for organizing this jam and for all the advice he gave.
+It really got me to get my butt back in the saddle of working on projects outside of work.
+Thanks to him, I have some of my passion for coding exploration back. 
+
+I also need to thank Francis Stokes for building the amazing LLJS community which made this jam possible.
+His videos inspire me to this day and I swear I've just osmosed better JS and TS practices from them.
+
+# Invaluable resources I used on this journey
+[The readme and example code of the SDK](https://github.com/dvhdr/launchpad-pro)
+[This article on understanding what SysEx actually is](https://blog.landr.com/midi-sysex/)
+[The MIDI SysEx Transfer utility. Thanks Pete Brown!](https://apps.microsoft.com/store/detail/midi-sysex-transfer-utility/9PFD4DDWGKTN?hl=en-us&gl=US)

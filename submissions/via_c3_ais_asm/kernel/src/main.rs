@@ -11,13 +11,12 @@ mod print;
 mod uart;
 
 use core::arch::asm;
-
 use crate::print::SERIAL1;
 
-const PAYLOAD_LEN: usize = core::include_bytes!("../../ais_asm/out.bin").len();
-
+// Include the payload, linker script will place it a 0x48000
 #[link_section = ".payload"]
 static PAYLOAD: [u8; PAYLOAD_LEN] = *core::include_bytes!("../../ais_asm/out.bin");
+const PAYLOAD_LEN: usize = core::include_bytes!("../../ais_asm/out.bin").len();
 
 pub fn multiboot_entry(_: &[u8]) {
     println!("");
@@ -36,6 +35,8 @@ pub fn multiboot_entry(_: &[u8]) {
         "AIS is not supported or not enabled"
     );
 
+    println!("AIS is supported and has been enabled");
+
     println!("Run payload at 0x{:08X}", PAYLOAD.as_ptr() as u32);
 
     // Flush serial
@@ -49,6 +50,9 @@ pub fn multiboot_entry(_: &[u8]) {
 
     // Show result
     println!("Result EAX = 0x{:08X}", r);
-    println!("");
 
+    println!("Done");
+    loop {
+        asm::halt()
+    }
 }

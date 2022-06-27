@@ -1,0 +1,52 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+# Environment
+.vagrant
+build
+.project
+.cproject
+
+*.xcworkspacedata
+
+*.xccheckout
+
+*.xcuserstate
+
+*.xcscheme
+
+tools/osx/simulator.xcodeproj/xcuserdata/davehodder.xcuserdatad/xcschemes/xcschememanagement.plist
+
+*.xcbkptlist
+tools/osx/simulator.xcodeproj/xcuserdata
+
+.vscode/

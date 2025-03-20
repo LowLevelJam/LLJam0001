@@ -27,7 +27,6 @@ Emulators are an extention of virtual machines allowing a user to recreate the p
 
 ## Tutorials
 ### Chip Emulators
-- [Emulator 101](http://www.emulator101.com/welcome.html) - Tutorials for full toolchains of many chipsets both real and virtual.
 - [Easy 6502](https://skilldrick.github.io/easy6502/)
 - [Writing a CHIP-8 Emulator](http://craigthomas.ca/tag/chip8.html) - A simple virtual console.
 - [Writing your own VM](https://justinmeiners.github.io/lc3-vm/) - A much more in depth tutorial with many alternate languages implementations.
